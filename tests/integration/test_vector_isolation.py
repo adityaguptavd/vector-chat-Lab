@@ -11,13 +11,17 @@ from app.services.document_ingestor import SimpleDocumentIngestor
 from tests.fakes.fake_embedder import FakeEmbedder
 from app.services.retrieval_service import RetrievalService
 
+from app.vector.faiss_vector_store import FAISSVectorStore
+from app.schemas.vector import VectorDocument
+from app.services.chunker import SimpleChunker
+
 
 def test_vector_store_isolation_between_users(db_session):
     uow = SqlAlchemyUnitOfWork(db_session)
 
     vector_manager = FakeUserVectorStoreManager()
     embedder = FakeEmbedder()
-    ingestor = SimpleDocumentIngestor(vector_manager, embedder)
+    ingestor = SimpleDocumentIngestor(vector_manager, embedder, SimpleChunker())
     hasher = FakeContentHasher()
 
     service = DocumentService(
@@ -49,9 +53,30 @@ def test_vector_store_isolation_between_users(db_session):
     results_user2 = retrieval.search(user2.id, "user2 content")
 
     # Ensure isolation via public API
-    assert results_user1[0][0] == doc1.id
-    assert results_user2[0][0] == doc2.id
+    assert results_user1[0].document_id == doc1.id
+    assert results_user2[0].document_id == doc2.id
 
     # Cross-check
-    assert results_user1[0][0] != doc2.id
-    assert results_user2[0][0] != doc1.id
+    assert results_user1[0].document_id != doc2.id
+    assert results_user2[0].document_id != doc1.id
+
+def test_faiss_persistence(tmp_path):
+    store = FAISSVectorStore(tmp_path, embedding_dim=3)
+
+    doc = VectorDocument(
+        document_id="doc1",
+        chunk_id="chunk1",
+        content="hello world",
+        embedding=[0.1, 0.2, 0.3],
+        metadata={},
+    )
+
+    store.add_documents([doc])
+
+    # Simulate restart
+    store = FAISSVectorStore(tmp_path, embedding_dim=3)
+
+    results = store.similarity_search([0.1, 0.2, 0.3], top_k=1)
+
+    assert len(results) == 1
+    assert results[0].content == "hello world"

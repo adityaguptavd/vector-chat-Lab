@@ -1,32 +1,22 @@
-from typing import List, Tuple
+from typing import List
 from app.domain.vector.vector_store import AbstractVectorStore
+from app.schemas.vector import VectorDocument
 
 
 class FakeVectorStore(AbstractVectorStore):
 
     def __init__(self) -> None:
-        self.vectors = {}  # document_id -> embedding
+        self.documents: List[VectorDocument] = []
 
-    def add_embeddings(
+    def add_documents(
         self,
-        document_id: str,
-        embeddings: List[List[float]],
+        documents: List[VectorDocument],
     ) -> None:
-        # For prototype assume one embedding per document
-        self.vectors[document_id] = embeddings[0]
+        self.documents.extend(documents)
 
     def similarity_search(
         self,
         query_embedding: List[float],
         top_k: int = 5,
-    ) -> List[Tuple[str, float]]:
-        results = []
-
-        for doc_id, embedding in self.vectors.items():
-            # naive similarity: inverse absolute distance
-            score = 1 / (1 + abs(embedding[0] - query_embedding[0]))
-            results.append((doc_id, score))
-
-        results.sort(key=lambda x: x[1], reverse=True)
-
-        return results[:top_k]
+    ) -> List[VectorDocument]:
+        return self.documents[:top_k]

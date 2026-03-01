@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List
+
+from app.schemas.vector import VectorDocument
 
 
 class AbstractVectorStore(ABC):
 
     @abstractmethod
-    def add_embeddings(
+    def add_documents(
         self,
-        document_id: str,
-        embeddings: List[List[float]],
+        documents: List[VectorDocument],
     ) -> None:
         pass
 
@@ -17,5 +18,5 @@ class AbstractVectorStore(ABC):
         self,
         query_embedding: List[float],
         top_k: int = 5,
-    ) -> List[Tuple[str, float]]:
+    ) -> List[VectorDocument]:
         pass
