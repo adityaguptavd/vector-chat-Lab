@@ -1,9 +1,9 @@
-from app.domain.services.document_ingestor import AbstractDocumentIngestor
+from app.domain.core.document_ingestor import AbstractDocumentIngestor
 from app.domain.vector.user_vector_store_manager import (
     AbstractUserVectorStoreManager,
 )
 from app.domain.vector.embedder import AbstractEmbedder
-from app.domain.services.chunker import AbstractChunker
+from app.domain.core.chunker import AbstractChunker
 from app.schemas.vector import VectorDocument
 
 

@@ -1,5 +1,5 @@
 import pytest
-from app.repositories.user_repository import UserRepository
+from app.infrastructure.db.repositories.user_repository import UserRepository
 from app.domain.user import User
 from app.domain.exceptions import UserAlreadyExists
 

@@ -1,15 +1,15 @@
 import pytest
 from pathlib import Path
 
-from app.vector.local_embedder import (
+from app.infrastructure.vector.local_embedder import (
     LocalSentenceTransformerEmbedder,
 )
-from app.vector.faiss_user_vector_store_manager import (
+from app.infrastructure.vector.faiss_user_vector_store_manager import (
     FAISSUserVectorStoreManager,
 )
-from app.services.chunker import SimpleChunker
-from app.services.document_ingestor import SimpleDocumentIngestor
-from app.services.retrieval_service import RetrievalService
+from app.application.services.chunker import SimpleChunker
+from app.application.services.document_ingestor import SimpleDocumentIngestor
+from app.application.services.retrieval_service import RetrievalService
 
 @pytest.mark.slow
 def test_real_semantic_retrieval(tmp_path: Path):

@@ -2,6 +2,7 @@ from app.domain.vector.user_vector_store_manager import (
     AbstractUserVectorStoreManager,
 )
 from app.domain.vector.embedder import AbstractEmbedder
+from app.domain.vector.vector_store import AbstractVectorStore
 from typing import List
 from app.schemas.vector import VectorDocument
 
@@ -22,7 +23,7 @@ class RetrievalService:
         query: str,
         top_k: int = 5,
     ) -> List[VectorDocument]:
-        store = self.user_vector_manager.get_store(user_id)
+        store: AbstractVectorStore = self.user_vector_manager.get_store(user_id)
 
         query_embedding = self.embedder.embed([query])[0]
 

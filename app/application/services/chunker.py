@@ -1,4 +1,4 @@
-from app.domain.services.chunker import AbstractChunker
+from app.domain.core.chunker import AbstractChunker
 from typing import List
 
 class SimpleChunker(AbstractChunker):

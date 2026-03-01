@@ -1,5 +1,5 @@
 import hashlib
-from app.domain.services.content_hasher import AbstractContentHasher
+from app.domain.core.content_hasher import AbstractContentHasher
 
 
 class Sha256ContentHasher(AbstractContentHasher):

@@ -1,4 +1,4 @@
-from app.domain.services.document_ingestor import AbstractDocumentIngestor
+from app.domain.core.document_ingestor import AbstractDocumentIngestor
 
 
 class FakeDocumentIngestor(AbstractDocumentIngestor):

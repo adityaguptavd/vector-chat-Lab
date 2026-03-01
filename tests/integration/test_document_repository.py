@@ -1,6 +1,6 @@
 import pytest
-from app.repositories.document_repository import DocumentRepository
-from app.repositories.user_repository import UserRepository
+from app.infrastructure.db.repositories.document_repository import DocumentRepository
+from app.infrastructure.db.repositories.user_repository import UserRepository
 from app.domain.document import Document
 from app.domain.user import User
 

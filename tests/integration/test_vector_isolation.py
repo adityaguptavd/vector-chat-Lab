@@ -1,19 +1,19 @@
 import pytest
-from app.services.document_service import DocumentService
-from app.unit_of_work import SqlAlchemyUnitOfWork
+from app.application.services.document_service import DocumentService
+from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.user import User
-from app.repositories.user_repository import UserRepository
+from app.infrastructure.db.repositories.user_repository import UserRepository
 from tests.fakes.fake_content_hasher import FakeContentHasher
 from tests.fakes.fake_user_vector_store_manager import (
     FakeUserVectorStoreManager,
 )
-from app.services.document_ingestor import SimpleDocumentIngestor
+from app.application.services.document_ingestor import SimpleDocumentIngestor
 from tests.fakes.fake_embedder import FakeEmbedder
-from app.services.retrieval_service import RetrievalService
+from app.application.services.retrieval_service import RetrievalService
 
-from app.vector.faiss_vector_store import FAISSVectorStore
+from app.infrastructure.vector.faiss_vector_store import FAISSVectorStore
 from app.schemas.vector import VectorDocument
-from app.services.chunker import SimpleChunker
+from app.application.services.chunker import SimpleChunker
 
 
 def test_vector_store_isolation_between_users(db_session):

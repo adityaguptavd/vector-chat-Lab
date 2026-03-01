@@ -1,8 +1,8 @@
 import pytest
-from app.services.document_service import DocumentService
-from app.unit_of_work import SqlAlchemyUnitOfWork
+from app.application.services.document_service import DocumentService
+from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.user import User
-from app.repositories.user_repository import UserRepository
+from app.infrastructure.db.repositories.user_repository import UserRepository
 from tests.fakes.fake_document_ingestor import FakeDocumentIngestor
 from tests.fakes.fake_content_hasher import FakeContentHasher
 

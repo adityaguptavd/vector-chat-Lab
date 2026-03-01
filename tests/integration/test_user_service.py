@@ -1,6 +1,6 @@
 import pytest
-from app.services.user_service import UserService
-from app.unit_of_work import SqlAlchemyUnitOfWork
+from app.application.services.user_service import UserService
+from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.exceptions import UserAlreadyExists, InvalidCredentials, InvalidToken
 from tests.fakes.fake_password_hasher import FakePasswordHasher
 from tests.fakes.fake_token_provider import FakeTokenProvider

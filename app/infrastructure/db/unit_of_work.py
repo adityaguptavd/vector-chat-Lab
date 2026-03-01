@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.domain.unit_of_work import AbstractUnitOfWork
-from app.repositories.user_repository import UserRepository
-from app.repositories.document_repository import DocumentRepository
+from app.infrastructure.db.repositories.user_repository import UserRepository
+from app.infrastructure.db.repositories.document_repository import DocumentRepository
 from types import TracebackType
 from typing import Optional, Type
 

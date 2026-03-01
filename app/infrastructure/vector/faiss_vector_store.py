@@ -10,7 +10,7 @@ from app.schemas.vector import VectorDocument
 
 class FAISSVectorStore(AbstractVectorStore):
 
-    def __init__(self, path: Path, embedding_dim: int):
+    def __init__(self, path: Path, embedding_dim: int) -> None:
         self._path = path
         self._embedding_dim = embedding_dim
         self._index_path = path / "index.faiss"

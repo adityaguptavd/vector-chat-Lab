@@ -1,7 +1,7 @@
 from app.domain.document import Document
 from app.domain.unit_of_work import AbstractUnitOfWork
-from app.domain.services.document_ingestor import AbstractDocumentIngestor
-from app.domain.services.content_hasher import AbstractContentHasher
+from app.domain.core.document_ingestor import AbstractDocumentIngestor
+from app.domain.core.content_hasher import AbstractContentHasher
 
 
 class DocumentService:
