@@ -1,14 +1,19 @@
 import os, logging
 from logging.handlers import RotatingFileHandler
 from .formatter import JSONFormatter
-
+from app.core.config import settings
 
 class LoggingManager:
 
     @staticmethod
     def configure():
         logger = logging.getLogger("app")
-        logger.setLevel(logging.INFO)
+
+        if logger.handlers:
+            return logger
+
+        logger.setLevel(settings.LOG_LEVEL.upper())
+        logger.propagate = False
 
         os.makedirs("logs", exist_ok=True)
 

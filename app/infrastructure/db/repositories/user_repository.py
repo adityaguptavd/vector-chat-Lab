@@ -1,4 +1,4 @@
-from app.db.models import UserModel
+from app.infrastructure.db.models.user_model import UserModel
 from app.domain.repositories.user_repository import AbstractUserRepository
 from typing import Optional
 from sqlalchemy import select, func

@@ -6,7 +6,7 @@ from app.domain.document import Document
 from app.domain.repositories.document_repository import (
     AbstractDocumentRepository,
 )
-from app.db.models import DocumentModel
+from app.infrastructure.db.models.document_model import DocumentModel
 
 
 class DocumentRepository(AbstractDocumentRepository):

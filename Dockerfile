@@ -3,10 +3,17 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y build-essential
+# System deps for building wheels
+RUN apt-get update && apt-get install -y build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Upgrade pip + install deps (CPU torch index)
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
 
 # -------- Stage 2: Final Runtime --------
 FROM python:3.11-slim
@@ -16,17 +23,16 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Create non-root user
-RUN useradd -m appuser
-
-# Copy installed Python packages
+# Copy installed Python packages from builder
 COPY --from=builder /usr/local /usr/local
 
+# Copy project files
 COPY . .
 
-RUN mkdir -p /app/logs
-RUN useradd -m appuser
-RUN chown -R appuser:appuser /app
+# Create non-root user + setup permissions (ONLY ONCE ✅)
+RUN useradd -m appuser \
+    && mkdir -p /app/logs \
+    && chown -R appuser:appuser /app
 
 USER appuser
 

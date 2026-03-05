@@ -1,6 +1,6 @@
 from app.application.interfaces.llm import AbstractLLM
 from app.application.services.retrieval_service import RetrievalService
-from app.schemas.vector import VectorDocument
+from app.infrastructure.vector.schemas.vector_document import VectorDocument
 from typing import List
 
 class ChatService:

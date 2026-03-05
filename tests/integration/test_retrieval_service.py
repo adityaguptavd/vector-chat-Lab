@@ -1,5 +1,5 @@
 from app.application.services.retrieval_service import RetrievalService
-from app.schemas.vector import VectorDocument
+from app.infrastructure.vector.schemas.vector_document import VectorDocument
 from tests.fakes.fake_user_vector_store_manager import (
     FakeUserVectorStoreManager,
 )

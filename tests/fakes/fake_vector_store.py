@@ -1,6 +1,6 @@
 from typing import List
 from app.domain.vector.vector_store import AbstractVectorStore
-from app.schemas.vector import VectorDocument
+from app.infrastructure.vector.schemas.vector_document import VectorDocument
 
 
 class FakeVectorStore(AbstractVectorStore):

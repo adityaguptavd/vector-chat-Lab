@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from .core.logging.logger import LoggingManager
 from .core.logging.middleware import RequestLoggingMiddleware
 from .core.handlers import register_exception_handlers
-from .routes.health import router as health_router
+from .api.routers import users, auth, documents, chat
+from app.infrastructure.db.init_db import init_db
 
 
 def create_app():
@@ -17,6 +18,12 @@ def create_app():
 
     register_exception_handlers(app)
 
-    app.include_router(health_router)
+    # Initiate DB
+    init_db()
+
+    app.include_router(users.router)
+    app.include_router(auth.router)
+    app.include_router(documents.router)
+    app.include_router(chat.router)
 
     return app

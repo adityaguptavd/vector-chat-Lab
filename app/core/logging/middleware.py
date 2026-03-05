@@ -18,20 +18,37 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         start_time = time()
 
-        logger.info(f"REQUEST_STARTED {request.method} {request.url.path}")
+        logger.info(
+            "REQUEST_STARTED",
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+            }
+        )
 
         try:
             response = await call_next(request)
         except Exception:
             duration = int((time() - start_time) * 1000)
-            logger.exception("UNHANDLED_EXCEPTION", extra={"duration_ms": duration})
+            logger.exception(
+                "UNHANDLED_EXCEPTION",
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "duration_ms": duration,
+                },
+            )
             raise
 
         duration = int((time() - start_time) * 1000)
 
         logger.info(
-            f"REQUEST_COMPLETED {request.method} {request.url.path}",
-            extra={"duration_ms": duration}
+            "REQUEST_COMPLETED",
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "duration_ms": duration,
+            }
         )
 
         response.headers["X-Request-ID"] = request_id

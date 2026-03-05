@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from app.schemas.vector import VectorDocument
+from app.infrastructure.vector.schemas.vector_document import VectorDocument
 
 
 class AbstractVectorStore(ABC):

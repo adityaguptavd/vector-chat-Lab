@@ -4,7 +4,7 @@ from app.domain.vector.user_vector_store_manager import (
 )
 from app.domain.vector.embedder import AbstractEmbedder
 from app.domain.core.chunker import AbstractChunker
-from app.schemas.vector import VectorDocument
+from app.infrastructure.vector.schemas.vector_document import VectorDocument
 
 
 class SimpleDocumentIngestor(AbstractDocumentIngestor):

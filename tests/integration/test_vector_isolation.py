@@ -12,7 +12,7 @@ from tests.fakes.fake_embedder import FakeEmbedder
 from app.application.services.retrieval_service import RetrievalService
 
 from app.infrastructure.vector.faiss_vector_store import FAISSVectorStore
-from app.schemas.vector import VectorDocument
+from app.infrastructure.vector.schemas.vector_document import VectorDocument
 from app.application.services.chunker import SimpleChunker
 
 
