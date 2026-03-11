@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 from .exceptions import AppException
-from app.domain.exceptions import DomainException, InvalidCredentials, InvalidToken, UserAlreadyExists
+from app.domain.exceptions import DomainException, InvalidCredentials, InvalidToken, UserAlreadyExists, NotFoundError, ForbiddenError
 
 from .logging.logger import LoggingManager
 from .logging.context import request_id_ctx
@@ -49,7 +49,7 @@ def register_exception_handlers(app):
 
         logger.warning(
             "DOMAIN_EXCEPTION",
-            extra={"message": exc.message},
+            extra={"error_message": exc.message},
         )
 
         return build_error_response(400, exc.message)
@@ -79,6 +79,23 @@ def register_exception_handlers(app):
         logger.warning("USER_ALREADY_EXISTS")
 
         return build_error_response(409, exc.message)
+    
+    # ---------- ACCESS / RESOURCE OVERRIDES ---------- #
+
+    @app.exception_handler(NotFoundError)
+    async def not_found_handler(request: Request, exc: NotFoundError):
+
+        logger.warning("NOT_FOUND", extra={"error_message": exc.message})
+
+        return build_error_response(404, exc.message)
+
+
+    @app.exception_handler(ForbiddenError)
+    async def forbidden_handler(request: Request, exc: ForbiddenError):
+
+        logger.warning("FORBIDDEN", extra={"error_message": exc.message})
+
+        return build_error_response(403, exc.message)
 
 
     # ---------- VALIDATION ---------- #

@@ -6,5 +6,5 @@ from app.infrastructure.db.models.user_model import UserModel
 from app.infrastructure.db.models.document_model import DocumentModel
 
 
-def init_db():
+def init_db() -> None:
     Base.metadata.create_all(bind=engine)

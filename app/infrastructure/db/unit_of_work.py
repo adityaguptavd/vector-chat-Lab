@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from app.domain.unit_of_work import AbstractUnitOfWork
 from app.infrastructure.db.repositories.user_repository import UserRepository
 from app.infrastructure.db.repositories.document_repository import DocumentRepository
+from app.infrastructure.db.repositories.chat_message_repository import ChatMessageRepository
+from app.infrastructure.db.repositories.chat_session_repository import ChatSessionRepository
 from types import TracebackType
 from typing import Optional, Type
 
@@ -14,6 +16,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __enter__(self) -> "SqlAlchemyUnitOfWork":
         self.user_repo = UserRepository(self.session)
         self.document_repo = DocumentRepository(self.session)
+        self.chat_messages_repo = ChatMessageRepository(self.session)
+        self.chat_sessions_repo = ChatSessionRepository(self.session)
         return self
 
     def __exit__(

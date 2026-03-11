@@ -13,7 +13,7 @@ from app.application.services.retrieval_service import RetrievalService
 
 @pytest.mark.slow
 def test_real_semantic_retrieval(tmp_path: Path):
-    embedder = LocalSentenceTransformerEmbedder()
+    embedder = LocalSentenceTransformerEmbedder(model_name="all-MiniLM-L6-v2")
 
     manager = FAISSUserVectorStoreManager(
         base_path=tmp_path,

@@ -15,7 +15,7 @@ router = APIRouter(
 def register(
     data: RegisterRequest,
     service: UserService = Depends(get_user_service),
-):
+) -> AuthResponse:
     user = service.register_user(data.email, data.password)
 
     # Immediately issue token (better UX)
@@ -31,7 +31,7 @@ def register(
 def login(
     data: LoginRequest,
     service: UserService = Depends(get_user_service),
-):
+) -> AuthResponse:
     result = service.login_user(data.email, data.password)
 
     return AuthResponse(
