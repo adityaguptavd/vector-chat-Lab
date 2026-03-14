@@ -12,7 +12,7 @@ class RAGChatService:
         self._retrieval_service = retrieval_service
         self._llm = llm
 
-    def chat(self, user_id: str, query: str, top_k: int = 5) -> str:
+    async def chat(self, user_id: str, query: str, top_k: int = 5) -> str:
         documents = self._retrieval_service.search(
             user_id=user_id,
             query=query,
@@ -23,7 +23,7 @@ class RAGChatService:
 
         prompt = self._build_prompt(context=context, query=query)
 
-        return self._llm.generate(prompt)
+        return await self._llm.generate(prompt)
 
     def _build_context(self, documents: List[VectorDocument]) -> str:
         return "\n\n".join(doc.content for doc in documents)

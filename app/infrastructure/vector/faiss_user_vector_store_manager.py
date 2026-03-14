@@ -7,8 +7,9 @@ from app.domain.vector.vector_store import AbstractVectorStore
 
 class FAISSUserVectorStoreManager(AbstractUserVectorStoreManager):
 
-    def __init__(self, base_path: Path, embedding_dim: int) -> None:
-        self._base_path = base_path
+    def __init__(self, base_path: str, embedding_dim: int) -> None:
+        self._base_path = Path(base_path or "./vector_store")
+        self._base_path.mkdir(parents=True, exist_ok=True)
         self._embedding_dim = embedding_dim
 
     def get_store(self, user_id: str) -> AbstractVectorStore:

@@ -10,11 +10,25 @@ from app.application.services.chat_service import ChatService
 from app.domain.unit_of_work import AbstractUnitOfWork
 from app.domain.security.password_hasher import AbstractPasswordHasher
 from app.domain.security.token_provider import AbstractTokenProvider
+from app.application.interfaces.llm import AbstractLLM
+from app.application.services.rag_chat_service import RAGChatService
+from app.application.services.retrieval_service import RetrievalService
+from app.infrastructure.vector.faiss_user_vector_store_manager import FAISSUserVectorStoreManager
+from app.infrastructure.vector.local_embedder import LocalSentenceTransformerEmbedder
+from tests.fakes.fake_llm import FakeLLM
 from app.core.config import settings
 from app.domain.exceptions import InvalidToken
 from fastapi import Depends
 from app.domain.user import User
 from app.core.logging.context import user_id_ctx
+
+# 🔥 SINGLETONS
+_embedder = LocalSentenceTransformerEmbedder(model_name=settings.EMBEDDING_MODEL)
+
+_vector_manager = FAISSUserVectorStoreManager(
+    base_path="data/vector_store",
+    embedding_dim=_embedder.dimension,
+)
 
 def _get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
@@ -44,6 +58,27 @@ def get_bearer_token(authorization: str | None = Header(default=None, include_in
 
     return token
 
+def get_retrieval_service() -> RetrievalService:
+
+    return RetrievalService(
+        user_vector_manager=_vector_manager,
+        embedder=_embedder,
+    )
+
+def get_llm() -> AbstractLLM:
+    return FakeLLM()  # later swap with OpenAI
+
+
+def get_rag_chat_service(
+    retrieval_service: RetrievalService = Depends(get_retrieval_service),
+    llm: AbstractLLM = Depends(get_llm),
+) -> RAGChatService:
+
+    return RAGChatService(
+        retrieval_service=retrieval_service,
+        llm=llm,
+    )
+
 def get_user_service(
     uow: AbstractUnitOfWork = Depends(get_uow),
     password_hasher: AbstractPasswordHasher = Depends(get_password_hasher),
@@ -70,5 +105,10 @@ async def get_current_user(
 
 def get_chat_service(
     uow: AbstractUnitOfWork = Depends(get_uow),
+    rag_chat_service: RAGChatService = Depends(get_rag_chat_service),
 ) -> ChatService:
-    return ChatService(uow)
+
+    return ChatService(
+        uow=uow,
+        rag_chat_service=rag_chat_service,
+    )
