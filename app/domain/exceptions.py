@@ -37,3 +37,7 @@ class NotFoundError(DomainException):
 class ForbiddenError(DomainException):
     def __init__(self, message: str = "Unauthorized access") -> None:
         super().__init__(message)
+
+class UnsupportedFileType(DomainException):
+    def __init__(self, message: str = "Unsupported file type") -> None:
+        super().__init__(message)

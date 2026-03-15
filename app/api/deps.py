@@ -6,10 +6,16 @@ from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.infrastructure.security.bcrypt_hasher import BcryptPasswordHasher
 from app.infrastructure.security.jwt_token_provider import JwtTokenProvider
 from app.application.services.user_service import UserService
+from app.application.services.document_service import DocumentService
+from app.application.services.document_ingestor import SimpleDocumentIngestor
+from app.infrastructure.security.sha_256_hasher import Sha256ContentHasher
+from app.application.services.chunker import SimpleChunker
 from app.application.services.chat_service import ChatService
 from app.domain.unit_of_work import AbstractUnitOfWork
 from app.domain.security.password_hasher import AbstractPasswordHasher
 from app.domain.security.token_provider import AbstractTokenProvider
+from app.domain.core.document_ingestor import AbstractDocumentIngestor
+from app.domain.core.content_hasher import AbstractContentHasher
 from app.application.interfaces.llm import AbstractLLM
 from app.application.services.rag_chat_service import RAGChatService
 from app.application.services.retrieval_service import RetrievalService
@@ -26,7 +32,7 @@ from app.core.logging.context import user_id_ctx
 _embedder = LocalSentenceTransformerEmbedder(model_name=settings.EMBEDDING_MODEL)
 
 _vector_manager = FAISSUserVectorStoreManager(
-    base_path="data/vector_store",
+    base_path="/app/vector_store",
     embedding_dim=_embedder.dimension,
 )
 
@@ -46,6 +52,16 @@ def get_password_hasher() -> AbstractPasswordHasher:
 
 def get_token_provider() -> AbstractTokenProvider:
     return JwtTokenProvider(secret_key=settings.JWT_SECRET)
+
+def get_document_ingestor() -> AbstractDocumentIngestor:
+    return SimpleDocumentIngestor(
+        user_vector_manager=_vector_manager,
+        embedder=_embedder,
+        chunker=SimpleChunker()
+    )
+
+def get_content_hasher() -> AbstractContentHasher:
+    return Sha256ContentHasher()
 
 def get_bearer_token(authorization: str | None = Header(default=None, include_in_schema=False)) -> str:
     if not authorization:
@@ -89,6 +105,18 @@ def get_user_service(
         uow=uow,
         password_hasher=password_hasher,
         token_provider=token_provider,
+    )
+
+def get_document_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    document_ingestor: AbstractDocumentIngestor = Depends(get_document_ingestor),
+    content_hasher: AbstractTokenProvider = Depends(get_content_hasher),
+) -> DocumentService:
+
+    return DocumentService(
+        uow=uow,
+        ingestor=document_ingestor,
+        content_hasher=content_hasher
     )
 
 async def get_current_user(

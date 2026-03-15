@@ -6,6 +6,7 @@ from app.domain.vector.vector_store import AbstractVectorStore
 from typing import List
 from app.infrastructure.vector.schemas.vector_document import VectorDocument
 
+from app.core.logging.logger import LoggingManager
 
 class RetrievalService:
 
@@ -23,11 +24,11 @@ class RetrievalService:
         query: str,
         top_k: int = 5,
     ) -> List[VectorDocument]:
+
         store: AbstractVectorStore = self.user_vector_manager.get_store(user_id)
 
         query_embedding = self.embedder.embed([query])[0]
 
-        return store.similarity_search(
-            query_embedding=query_embedding,
-            top_k=top_k,
-        )
+        results = store.similarity_search(query_embedding=query_embedding, top_k=top_k)
+
+        return results

@@ -2,6 +2,7 @@ from app.domain.document import Document
 from app.domain.unit_of_work import AbstractUnitOfWork
 from app.domain.core.document_ingestor import AbstractDocumentIngestor
 from app.domain.core.content_hasher import AbstractContentHasher
+from app.application.dto.document import DocumentResult
 
 
 class DocumentService:
@@ -21,7 +22,7 @@ class DocumentService:
         user_id: str,
         filename: str,
         content: bytes,
-    ) -> Document:
+    ) -> DocumentResult:
 
         content_hash = self.content_hasher.hash(content)
 
@@ -32,7 +33,7 @@ class DocumentService:
             )
 
             if existing:
-                return existing
+                return DocumentResult.model_validate(existing)
 
             document = Document.create(
                 user_id=user_id,
@@ -42,10 +43,12 @@ class DocumentService:
 
             created = self.uow.document_repo.create(document)
 
-            self.ingestor.ingest(
-                user_id=user_id,
-                document_id=created.id,
-                content=content.decode(),
-            )
+        # OUTSIDE TX
+        self.ingestor.ingest(
+            user_id=user_id,
+            document_id=created.id,
+            content_bytes=content,
+            filename=filename,
+        )
 
-            return created
+        return DocumentResult.model_validate(created)

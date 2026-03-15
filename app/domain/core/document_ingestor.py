@@ -8,6 +8,7 @@ class AbstractDocumentIngestor(ABC):
         self,
         user_id: str,
         document_id: str,
-        content: str,
+        content_bytes: bytes,
+        filename: str
     ) -> None:
         pass

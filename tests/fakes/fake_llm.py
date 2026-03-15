@@ -4,4 +4,4 @@ class FakeLLM:
 
     async def generate(self, prompt: str) -> str:
         self.last_prompt = prompt
-        return "fake-response"
+        return prompt

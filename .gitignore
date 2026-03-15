@@ -86,3 +86,5 @@ temp/
 # Postgres Data
 # ----------------------
 pgdata/
+
+vector_store/

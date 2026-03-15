@@ -98,7 +98,6 @@ class FAISSVectorStore(AbstractVectorStore):
         query_embedding: List[float],
         top_k: int = 5,
     ) -> List[VectorDocument]:
-
         if len(query_embedding) != self._embedding_dim:
             raise ValueError(
                 f"Query embedding dimension mismatch. "

@@ -5,6 +5,9 @@ from app.domain.vector.user_vector_store_manager import (
 from app.domain.vector.embedder import AbstractEmbedder
 from app.domain.core.chunker import AbstractChunker
 from app.infrastructure.vector.schemas.vector_document import VectorDocument
+from app.domain.exceptions import UnsupportedFileType
+from io import BytesIO
+from pypdf import PdfReader
 
 
 class SimpleDocumentIngestor(AbstractDocumentIngestor):
@@ -19,16 +22,36 @@ class SimpleDocumentIngestor(AbstractDocumentIngestor):
         self.embedder = embedder
         self.chunker = chunker
 
+    def _parse_bytes(self, content_bytes: bytes, filename: str) -> str:
+
+        filename = filename.lower()
+
+        if filename.endswith(".pdf"):
+            reader = PdfReader(BytesIO(content_bytes))
+            text = "\n".join(
+                page.extract_text() or ""
+                for page in reader.pages
+            )
+            return text
+
+        elif filename.endswith(".txt") or filename.endswith(".md"):
+            return content_bytes.decode("utf-8", errors="ignore")
+
+        else:
+            raise UnsupportedFileType()
+
     def ingest(
         self,
         user_id: str,
         document_id: str,
-        content: str,
+        content_bytes: bytes,
+        filename: str
     ) -> None:
-
         store = self.user_vector_manager.get_store(user_id)
 
-        chunks = self.chunker.chunk(content)
+        text = self._parse_bytes(content_bytes, filename)
+
+        chunks = self.chunker.chunk(text)
 
         embeddings = self.embedder.embed(chunks)
 
@@ -41,7 +64,7 @@ class SimpleDocumentIngestor(AbstractDocumentIngestor):
                     chunk_id=f"{document_id}_chunk_{idx}",
                     content=chunk_text,
                     embedding=embedding,
-                    metadata={},
+                    metadata={ "filename": filename },
                 )
             )
 

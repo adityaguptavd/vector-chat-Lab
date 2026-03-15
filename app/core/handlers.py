@@ -3,7 +3,15 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 from .exceptions import AppException
-from app.domain.exceptions import DomainException, InvalidCredentials, InvalidToken, UserAlreadyExists, NotFoundError, ForbiddenError
+from app.domain.exceptions import (
+    DomainException, 
+    InvalidCredentials, 
+    InvalidToken, 
+    UserAlreadyExists, 
+    NotFoundError, 
+    ForbiddenError,
+    UnsupportedFileType
+)
 
 from .logging.logger import LoggingManager
 from .logging.context import request_id_ctx
@@ -109,6 +117,14 @@ def register_exception_handlers(app):
             "Invalid request payload",
             errors=exc.errors(),
         )
+    
+
+    @app.exception_handler(UnsupportedFileType)
+    async def unsupported_file_type_handler(request: Request, exc: UnsupportedFileType):
+
+        logger.warning("UNSUPPORTED_FILE_TYPE")
+
+        return build_error_response(422, exc.message)
 
 
     # ---------- FALLBACK ---------- #
