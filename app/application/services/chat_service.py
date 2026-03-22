@@ -1,10 +1,12 @@
-from typing import List
+from typing import List, AsyncGenerator, Tuple
 
 from app.domain.chat_message import ChatMessage, MessageRole
 from app.domain.chat_session import ChatSession
 from app.domain.exceptions import NotFoundError, ForbiddenError
 from app.domain.unit_of_work import AbstractUnitOfWork
 from app.application.services.rag_chat_service import RAGChatService
+from app.core.utils.llm_validator import LLMResponseValidator
+from app.core.responses import StreamResponseBuilder
 
 from app.core.logging.logger import LoggingManager
 from app.application.dto.chat import ChatSessionResult, ChatMessageResult
@@ -51,7 +53,7 @@ class ChatService:
         user_id: str,
         session_id: str,
         content: str,
-    ) -> str:
+    ) -> List[ChatMessageResult]:
 
         logger.debug(
             "Chat message attempt",
@@ -103,7 +105,7 @@ class ChatService:
             extra={"event": "chat_success", "user_id": user_id, "session_id": session_id},
         )
 
-        return response_text
+        return [ChatMessageResult.model_validate(user_msg), ChatMessageResult.model_validate(ai_msg)]
 
     def send_message(
         self,
@@ -151,3 +153,117 @@ class ChatService:
             raise ForbiddenError("Access denied")
 
         return session
+
+    def store_user_message(self, user_id: str, session_id: str, content: str) -> Tuple[ChatSession, ChatMessage]:
+        with self.uow:
+            session = self._get_owned_session(user_id, session_id)
+
+            if session.is_archived:
+                raise ForbiddenError("Cannot send messages to archived session")
+            # -------- STORE USER -------- #
+
+            user_msg = ChatMessage.create(
+                session_id=session.id,
+                role=MessageRole.USER,
+                content=content,
+            )
+
+            self.uow.chat_messages_repo.create(user_msg)
+            session.touch()
+            self.uow.chat_sessions_repo.update(session)
+
+        return session, user_msg
+
+    async def stream_message(
+        self,
+        session: ChatSession,
+        user_msg: ChatMessage,
+        content: str,
+        user_id: str
+    ) -> AsyncGenerator[str, None]:
+        try:
+
+            logger.debug(
+                "Streaming chat attempt",
+                extra={"event": "chat_stream_attempt", "user_id": user_id, "session_id": session.id},
+            )
+
+            # -------- STREAM -------- #
+            full_response = ""
+
+            try:
+                async for chunk in self._rag.stream_chat(
+                    user_id=user_id,
+                    query=content
+                ):
+                    full_response += chunk
+                    yield StreamResponseBuilder.chunk(chunk)
+
+            except Exception as e:
+                logger.error("LLM_GENERATION_FAILED", extra={"event": "llm_generation_failure", "user_id": user_id, "session_id": session.id, "error": str(e)})
+                yield StreamResponseBuilder.error("Streaming failed")
+                return
+
+            # -------- VALIDATION -------- #
+            validation_failed = False
+
+            try:
+                validated = LLMResponseValidator.validate(full_response)
+            except Exception as e:
+                validation_failed = True
+                logger.error("LLM_VALIDATION_FAILED", extra={"event": "llm_validation_failure", "user_id": user_id, "session_id": session.id, "error": str(e)})
+
+            # -------- STORE AI -------- #
+            ai_msg = None
+
+            if not validation_failed:
+                try:
+                    with self.uow:
+                        ai_msg = ChatMessage.create(
+                            session_id=session.id,
+                            role=MessageRole.ASSISTANT,
+                            content=validated,
+                        )
+                        self.uow.chat_messages_repo.create(ai_msg)
+                        session.touch()
+                        self.uow.chat_sessions_repo.update(session)
+
+                except Exception as e:
+                    logger.error(
+                        "AI_MESSAGE_PERSIST_FAILED",
+                        extra={
+                            "event": "ai_persist_failure",
+                            "user_id": user_id,
+                            "session_id": session.id,
+                            "error": str(e),
+                        },
+                    )
+                    ai_msg = None
+
+            # -------- POST STREAM SIGNALS -------- #
+
+            if validation_failed:
+                yield StreamResponseBuilder.warning(
+                    "Response may be unreliable"
+                )
+
+            payload = {
+                "user_message": ChatMessageResult.model_validate(user_msg).model_dump(mode="json")
+                if user_msg else None,
+
+                "ai_message": ChatMessageResult.model_validate(ai_msg).model_dump(mode="json")
+                if ai_msg else None
+            }
+
+            yield StreamResponseBuilder.end(payload)
+
+            logger.info(
+                    "Streaming chat success",
+                    extra={"event": "chat_stream_success", "user_id": user_id, "session_id": session.id},
+                )
+        except Exception as e:
+            logger.error(
+                "Unexpected error occured while streaming",
+                extra={"event": "chat_stream_failed", "user_id": user_id, "session_id": session.id, "error": str(e)}
+            )
+            yield StreamResponseBuilder.error("Unexpected error occured")

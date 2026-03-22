@@ -21,7 +21,7 @@ from app.application.services.rag_chat_service import RAGChatService
 from app.application.services.retrieval_service import RetrievalService
 from app.infrastructure.vector.faiss_user_vector_store_manager import FAISSUserVectorStoreManager
 from app.infrastructure.vector.local_embedder import LocalSentenceTransformerEmbedder
-from tests.fakes.fake_llm import FakeLLM
+from app.infrastructure.llm.groq_llm import GroqLLM
 from app.core.config import settings
 from app.domain.exceptions import InvalidToken
 from fastapi import Depends
@@ -82,7 +82,7 @@ def get_retrieval_service() -> RetrievalService:
     )
 
 def get_llm() -> AbstractLLM:
-    return FakeLLM()  # later swap with OpenAI
+    return GroqLLM(api_key=settings.LLM_API_KEY, model=settings.LLM_MODEL)
 
 
 def get_rag_chat_service(

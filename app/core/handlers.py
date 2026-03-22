@@ -2,6 +2,8 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
+from app.core.responses import ResponseBuilder
+
 from .exceptions import AppException
 from app.domain.exceptions import (
     DomainException, 
@@ -20,20 +22,6 @@ from .logging.context import request_id_ctx
 logger = LoggingManager.get_logger("exceptions")
 
 
-# ---------------- RESPONSE BUILDER ---------------- #
-
-def build_error_response(status_code: int, message: str, errors=None):
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "success": False,
-            "message": message,
-            "errors": errors,
-            "request_id": request_id_ctx.get(),
-        },
-    )
-
-
 # ---------------- REGISTER HANDLERS ---------------- #
 
 def register_exception_handlers(app):
@@ -44,11 +32,20 @@ def register_exception_handlers(app):
 
         logger.error(
             "APP_EXCEPTION",
-            extra={"internal_message": exc.internal_message},
+            extra={
+                "internal_message": exc.internal_message,
+                "error_code": exc.error_code,
+                "metadata": exc.metadata,
+            },
             exc_info=True,
         )
 
-        return build_error_response(exc.status_code, exc.client_message)
+        return ResponseBuilder.error(
+            exc.status_code,
+            exc.client_message,
+            error_code=exc.error_code,
+            metadata=exc.metadata,
+        )
 
 
     # ---------- DOMAIN BASE HANDLER ---------- #
@@ -60,7 +57,7 @@ def register_exception_handlers(app):
             extra={"error_message": exc.message},
         )
 
-        return build_error_response(400, exc.message)
+        return ResponseBuilder.error(400, exc.message)
 
 
     # ---------- AUTH OVERRIDES ---------- #
@@ -69,7 +66,7 @@ def register_exception_handlers(app):
 
         logger.warning("INVALID_CREDENTIALS")
 
-        return build_error_response(401, exc.message)
+        return ResponseBuilder.error(401, exc.message)
 
 
     @app.exception_handler(InvalidToken)
@@ -77,7 +74,7 @@ def register_exception_handlers(app):
 
         logger.warning("INVALID_TOKEN")
 
-        return build_error_response(401, exc.message)
+        return ResponseBuilder.error(401, exc.message)
 
 
     # ---------- USER OVERRIDE ---------- #
@@ -86,7 +83,7 @@ def register_exception_handlers(app):
 
         logger.warning("USER_ALREADY_EXISTS")
 
-        return build_error_response(409, exc.message)
+        return ResponseBuilder.error(409, exc.message)
     
     # ---------- ACCESS / RESOURCE OVERRIDES ---------- #
 
@@ -95,7 +92,7 @@ def register_exception_handlers(app):
 
         logger.warning("NOT_FOUND", extra={"error_message": exc.message})
 
-        return build_error_response(404, exc.message)
+        return ResponseBuilder.error(404, exc.message)
 
 
     @app.exception_handler(ForbiddenError)
@@ -103,7 +100,7 @@ def register_exception_handlers(app):
 
         logger.warning("FORBIDDEN", extra={"error_message": exc.message})
 
-        return build_error_response(403, exc.message)
+        return ResponseBuilder.error(403, exc.message)
 
 
     # ---------- VALIDATION ---------- #
@@ -112,7 +109,7 @@ def register_exception_handlers(app):
 
         logger.warning("VALIDATION_ERROR", exc_info=True)
 
-        return build_error_response(
+        return ResponseBuilder.error(
             422,
             "Invalid request payload",
             errors=exc.errors(),
@@ -124,7 +121,7 @@ def register_exception_handlers(app):
 
         logger.warning("UNSUPPORTED_FILE_TYPE")
 
-        return build_error_response(422, exc.message)
+        return ResponseBuilder.error(422, exc.message)
 
 
     # ---------- FALLBACK ---------- #
@@ -133,4 +130,4 @@ def register_exception_handlers(app):
 
         logger.critical("UNHANDLED_EXCEPTION", exc_info=True)
 
-        return build_error_response(500, "Internal server error")
+        return ResponseBuilder.error(500, "Internal server error")

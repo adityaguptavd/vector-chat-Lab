@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.api.deps import get_current_user, get_chat_service
 from app.application.services.chat_service import ChatService
@@ -17,7 +18,7 @@ def create_session(
     title: str | None = None,
     user: User = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service),
-):
+) -> JSONResponse:
     payload = service.create_session(user.id, title)
 
     return ResponseBuilder.success(message="Chat session created", status_code=201, data=payload.model_dump(mode="json"))
@@ -27,7 +28,7 @@ def create_session(
 def list_sessions(
     user: User = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service),
-):
+) -> JSONResponse:
     payload = service.list_sessions(user.id)
 
     return ResponseBuilder.success(message="Chat sessions retrieved", data=[p.model_dump(mode="json") for p in payload])
@@ -42,14 +43,14 @@ async def send_message(
     content: str,
     user: User = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service),
-):
+) -> JSONResponse:
     payload = await service.add_user_message_and_generate(
         user_id=user.id,
         session_id=session_id,
         content=content
     )
 
-    return ResponseBuilder.success(message="Message sent and received", status_code=201, data=payload)
+    return ResponseBuilder.success(message="Message sent and received", status_code=201, data=[p.model_dump(mode="json") for p in payload])
 
 
 
@@ -58,7 +59,24 @@ def list_messages(
     session_id: str,
     user: User = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service),
-):
+) -> JSONResponse:
     payload = service.list_messages(user.id, session_id)
 
     return ResponseBuilder.success(message="All messages fetched", data=[p.model_dump(mode="json") for p in payload])
+
+@router.post("/chat/{session_id}/stream")
+async def stream_chat(
+    session_id: str,
+    content: str,
+    service: ChatService = Depends(get_chat_service),
+    user: User = Depends(get_current_user)
+) -> StreamingResponse:
+
+    # validate stream request and get session
+    
+    session, user_msg = service.store_user_message(user_id=user.id, session_id=session_id, content=content)
+
+    return StreamingResponse(
+        service.stream_message(session=session, user_msg=user_msg, content=content, user_id=user.id),
+        media_type="text/event-stream"
+    )

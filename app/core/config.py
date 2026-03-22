@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     EMBEDDING_MODEL: str
     LOG_LEVEL: str | None = "INFO"
+    LLM_API_KEY: str
+    LLM_MODEL: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
