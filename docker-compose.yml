@@ -12,10 +12,10 @@ services:
     restart: always
 
   backend:
-    build: .
+    build: ./server
     container_name: genai-backend
     env_file:
-      - .env
+      - ./server/.env
     depends_on:
       - db
     ports:
