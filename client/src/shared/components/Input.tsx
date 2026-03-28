@@ -1,39 +1,18 @@
+import { FormFieldInjectedProps } from "./Form/FormField";
+
 type InputProps = {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  type?: string;
   label?: string;
-  error?: string | null;
-};
+} & Partial<FormFieldInjectedProps> &
+  React.InputHTMLAttributes<HTMLInputElement>;
 
-export default function Input({
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  label,
-  error,
-}: InputProps) {
+export const Input = ({ label, error, ...props }: InputProps) => {
   return (
-    <div className="space-y-1">
-      {label && (
-        <label className="text-sm text-gray-300">{label}</label>
-      )}
+    <div className="flex flex-col gap-1">
+      {label && <label>{label}</label>}
 
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full p-2 rounded bg-gray-800 outline-none border ${
-          error ? "border-red-500" : "border-gray-700"
-        }`}
-      />
+      <input {...props} />
 
-      {error && (
-        <p className="text-red-400 text-xs">{error}</p>
-      )}
+      {error && <span className="text-red-500">{error}</span>}
     </div>
   );
-}
+};
