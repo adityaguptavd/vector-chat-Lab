@@ -153,13 +153,23 @@ class ChatService:
             raise ForbiddenError("Access denied")
 
         return session
+    
+    def get_or_create_session(self, user_id: str, session_id: str) -> ChatSession:
+        session = self.uow.chat_sessions_repo.get_by_id(session_id)
 
-    def store_user_message(self, user_id: str, session_id: str, content: str) -> Tuple[ChatSession, ChatMessage]:
+        if not session:
+            session = self.create_session(user_id, "New chat")
+
+        if session.user_id != user_id:
+            raise ForbiddenError("Access denied")
+
+        return session
+
+    def store_user_message(self, user_id: str, session: ChatSession, content: str) -> ChatMessageResult:
+        if session.is_archived:
+            raise ForbiddenError("Cannot send messages to archived session")
+        
         with self.uow:
-            session = self._get_owned_session(user_id, session_id)
-
-            if session.is_archived:
-                raise ForbiddenError("Cannot send messages to archived session")
             # -------- STORE USER -------- #
 
             user_msg = ChatMessage.create(
@@ -172,7 +182,7 @@ class ChatService:
             session.touch()
             self.uow.chat_sessions_repo.update(session)
 
-        return session, user_msg
+        return ChatMessageResult.model_validate(user_msg)
 
     async def stream_message(
         self,

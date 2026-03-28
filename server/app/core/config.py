@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Literal
 
 
 class Settings(BaseSettings):
@@ -10,6 +11,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str | None = "INFO"
     LLM_API_KEY: str
     LLM_MODEL: str
+    ENV: Literal["dev", "prod"]
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -64,7 +64,7 @@ def list_messages(
 
     return ResponseBuilder.success(message="All messages fetched", data=[p.model_dump(mode="json") for p in payload])
 
-@router.post("/chat/{session_id}/stream")
+@router.get("/{session_id}/stream")
 async def stream_chat(
     session_id: str,
     content: str,
@@ -73,8 +73,9 @@ async def stream_chat(
 ) -> StreamingResponse:
 
     # validate stream request and get session
+    session = service.get_or_create_session(user_id=user.id, session_id=session_id)
     
-    session, user_msg = service.store_user_message(user_id=user.id, session_id=session_id, content=content)
+    user_msg = service.store_user_message(user_id=user.id, session=session, content=content)
 
     return StreamingResponse(
         service.stream_message(session=session, user_msg=user_msg, content=content, user_id=user.id),

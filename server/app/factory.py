@@ -7,6 +7,7 @@ from .core.logging.middleware import RequestLoggingMiddleware
 from .core.handlers import register_exception_handlers
 from .api.routers import users, auth, documents, chat
 from app.infrastructure.db.init_db import init_db
+from fastapi.middleware.cors import CORSMiddleware
 
 
 def custom_openapi(app: FastAPI):
@@ -40,6 +41,14 @@ def create_app():
 
     app = FastAPI()
     app.openapi = lambda: custom_openapi(app)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],  # your frontend
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     app.add_middleware(RequestLoggingMiddleware)
 
