@@ -17,9 +17,25 @@ export type FormFieldInjectedProps = {
 };
 
 export const FormField = ({ name, rules, children }: FormFieldProps) => {
-  const { register, errors, touched } = useFormContext();
+  const {
+    register,
+    unregister,
+    getFieldProps,
+    errors,
+    touched,
+  } = useFormContext();
 
-  const field = register(name, rules);
+  // register safely (side effect)
+  useEffect(() => {
+    register(name, rules);
+
+    return () => {
+      unregister(name);
+    };
+  }, [name]);
+
+  // pure read
+  const field = getFieldProps(name);
 
   return React.cloneElement(children, {
     ...field,

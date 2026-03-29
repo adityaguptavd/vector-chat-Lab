@@ -26,7 +26,10 @@ type UseFormReturn = {
   errors: FormErrors;
   touched: FormTouched;
 
-  register: (name: string, rules?: ValidationRule) => {
+  register: (name: string, rules?: ValidationRule) => void;
+  unregister: (name: string) => void;
+
+  getFieldProps: (name: string) => {
     name: string;
     value: any;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -34,10 +37,13 @@ type UseFormReturn = {
   };
 
   setValue: (name: string, value: any) => void;
-  validateField: (name: string) => string | null;
+
+  validateField: (name: string, valueOverride?: any) => string | null;
   validateAll: () => boolean;
 
-  handleSubmit: (onSubmit: (values: FormValues) => void) => (e: React.SubmitEvent) => void;
+  handleSubmit: (
+    onSubmit: (values: FormValues) => void
+  ) => (e: React.FormEvent) => void;
 };
 
 /* =========================
@@ -51,17 +57,49 @@ export const useForm = (): UseFormReturn => {
   const [fields, setFields] = useState<Record<string, FieldConfig>>({});
 
   /* =========================
-     Register Field
+     Register (SIDE EFFECT ONLY)
   ========================= */
   const register = (name: string, rules?: ValidationRule) => {
-    // store field config
-    if (!fields[name]) {
-      setFields((prev) => ({
+    setFields((prev) => {
+      if (prev[name]) return prev;
+
+      return {
         ...prev,
         [name]: { name, rules },
-      }));
-    }
+      };
+    });
+  };
 
+  const unregister = (name: string) => {
+    setFields((prev) => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+
+    setValues((prev) => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+
+    setErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+
+    setTouched((prev) => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+  };
+
+  /* =========================
+     Field Props (PURE)
+  ========================= */
+  const getFieldProps = (name: string) => {
     return {
       name,
       value: values[name] || "",
@@ -73,7 +111,6 @@ export const useForm = (): UseFormReturn => {
           [name]: value,
         }));
 
-        // live validation (optional but useful)
         validateField(name, value);
       },
       onBlur: () => {
@@ -98,29 +135,31 @@ export const useForm = (): UseFormReturn => {
   };
 
   /* =========================
-     Validation Logic
+     Validation
   ========================= */
   const validateField = (name: string, valueOverride?: any): string | null => {
     const field = fields[name];
     if (!field) return null;
 
-    const value = valueOverride !== undefined ? valueOverride : values[name];
+    const value =
+      valueOverride !== undefined ? valueOverride : values[name];
     const rules = field.rules;
 
     let error: string | null = null;
 
     if (rules) {
-      // required
       if (rules.required && !value) {
         error = rules.required;
       }
 
-      // minLength
-      if (!error && rules.minLength && value?.length < rules.minLength.value) {
+      if (
+        !error &&
+        rules.minLength &&
+        value?.length < rules.minLength.value
+      ) {
         error = rules.minLength.message;
       }
 
-      // custom validate
       if (!error && rules.validate) {
         error = rules.validate(value);
       }
@@ -134,9 +173,6 @@ export const useForm = (): UseFormReturn => {
     return error;
   };
 
-  /* =========================
-     Validate All
-  ========================= */
   const validateAll = () => {
     let isValid = true;
 
@@ -149,15 +185,14 @@ export const useForm = (): UseFormReturn => {
   };
 
   /* =========================
-     Handle Submit
+     Submit
   ========================= */
   const handleSubmit =
     (onSubmit: (values: FormValues) => void) =>
-    (e: React.SubmitEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
 
       const isValid = validateAll();
-
       if (!isValid) return;
 
       onSubmit(values);
@@ -168,6 +203,8 @@ export const useForm = (): UseFormReturn => {
     errors,
     touched,
     register,
+    unregister,
+    getFieldProps,
     setValue,
     validateField,
     validateAll,

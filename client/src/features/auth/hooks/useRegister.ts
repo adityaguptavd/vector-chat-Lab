@@ -10,7 +10,7 @@ export const useRegister = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const registerUser = async (payload: RegisterPayload):Promise<Result<any>> => {
+  const registerUser = async (payload: RegisterPayload):Promise<Result<RegisterData>> => {
     setIsLoading(true);
     setError(null);
 
@@ -36,7 +36,6 @@ export const useRegister = () => {
 
     // Success
     setData(res.data);
-    localStorage.setItem("access_token", res.data.access_token);
     setIsLoading(false);
     return { success: true, data: res.data };
   };

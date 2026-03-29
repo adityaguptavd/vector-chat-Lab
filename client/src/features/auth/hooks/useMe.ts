@@ -1,23 +1,21 @@
 import { useState } from "react";
-import { loginApi } from "../api";
-import type { LoginPayload, LoginData } from "../types";
+import { getMeApi } from "../api";
+import { UserData } from "../types";
 import { apiHandler } from "@/services/apiHandler";
 import { ApiResponse } from "@/shared/types/api";
 import { Result } from "@/shared/types/result";
 
-export const useLogin = () => {
-  const [data, setData] = useState<LoginData | null>(null);
+export const useMe = () => {
+  const [data, setData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loginUser = async (
-    payload: LoginPayload
-  ): Promise<Result<LoginData>> => {
+  const getMe = async (): Promise<Result<UserData>> => {
     setIsLoading(true);
     setError(null);
 
     const { data: res, error: httpError } =
-      await apiHandler<ApiResponse<LoginData>>(loginApi(payload));
+      await apiHandler<ApiResponse<UserData>>(getMeApi());
 
     // HTTP / Network error
     if (httpError) {
@@ -45,6 +43,6 @@ export const useLogin = () => {
     data,
     isLoading,
     error,
-    loginUser,
+    getMe,
   };
 };

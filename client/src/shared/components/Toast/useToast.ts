@@ -30,18 +30,18 @@ export const useToast = () => {
   };
 
   const showPromise = async <T>(
-    promise: Promise<T>,
+    fn: () => Promise<{ success: boolean; data?: T; error?: string }>,
     messages: {
       loading: string;
       success: string;
-      error: string;
+      error?: string;
     }
   ) => {
     const id = showToast(messages.loading, "loading", 0);
 
-    try {
-      const result = await promise;
+    const result = await fn();
 
+    if (result.success) {
       setToasts((prev) =>
         prev.map((t) =>
           t.id === id
@@ -53,23 +53,26 @@ export const useToast = () => {
       setTimeout(() => removeToast(id), 3000);
 
       return result;
-    } catch (err: any) {
-      setToasts((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? {
-                ...t,
-                message: err?.message || messages.error,
-                type: "error",
-              }
-            : t
-        )
-      );
-
-      setTimeout(() => removeToast(id), 3000);
-
-      throw err;
     }
+
+    const errorMessage =
+      result.error || messages.error || "Something went wrong";
+
+    setToasts((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              message: errorMessage,
+              type: "error",
+            }
+          : t
+      )
+    );
+
+    setTimeout(() => removeToast(id), 3000);
+
+    return result;
   };
 
   return {

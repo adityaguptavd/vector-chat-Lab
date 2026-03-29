@@ -3,27 +3,40 @@ import { FormField } from "@/shared/components/Form/FormField";
 import { Input } from "@/shared/components/Input";
 import { useRegister } from "../hooks/useRegister";
 import { useToastContext } from "@/shared/components/Toast/ToastContext";
-import { toPromise } from "@/shared/utils/toPromise";
+import { useAuth } from "../hooks/useAuthContext";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 
 export default function RegisterPage() {
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
+  const from = (location.state as any)?.from?.pathname || "/dashboard";
+
   const { registerUser, isLoading, error, data } = useRegister();
 
   const { showPromise } = useToastContext();
 
   const handleSubmit = async (values: Record<string, any>) => {
-    await showPromise(
-      toPromise(
+    const result = await showPromise(
+      () =>
         registerUser({
           email: values.email,
           password: values.password,
-        })
-      ),
+        }),
       {
         loading: "Creating your account...",
         success: "Welcome aboard!",
         error: "Registration failed",
       }
     );
+
+    if (result.success && result.data) {
+      login(result.data.access_token);
+      navigate(from, { replace: true });
+    }
+
   };
 
   return (
@@ -84,6 +97,15 @@ export default function RegisterPage() {
           >
             {isLoading ? "Registering..." : "Register"}
           </button>
+          <div className="text-sm text-gray-400 text-center">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="text-blue-400 hover:text-blue-300 hover:underline transition"
+            >
+              Login
+            </Link>
+          </div>
         </div>
       </Form>
     </div>
