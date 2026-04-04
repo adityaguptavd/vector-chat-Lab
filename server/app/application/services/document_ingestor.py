@@ -8,7 +8,11 @@ from app.infrastructure.vector.schemas.vector_document import VectorDocument
 from app.domain.exceptions import UnsupportedFileType
 from io import BytesIO
 from pypdf import PdfReader
+import mimetypes
 
+from app.core.logging.logger import LoggingManager
+
+logger = LoggingManager.get_logger("document_ingestor_service")
 
 class SimpleDocumentIngestor(AbstractDocumentIngestor):
 
@@ -24,9 +28,13 @@ class SimpleDocumentIngestor(AbstractDocumentIngestor):
 
     def _parse_bytes(self, content_bytes: bytes, filename: str) -> str:
 
-        filename = filename.lower()
+        logger.info("INGESTOR_VERSION", extra={"version": "v2_mimetypes"})
 
-        if filename.endswith(".pdf"):
+        filename = filename.lower().strip()
+
+        mime, _ = mimetypes.guess_type(filename)
+
+        if mime == "application/pdf":
             reader = PdfReader(BytesIO(content_bytes))
             text = "\n".join(
                 page.extract_text() or ""
@@ -34,11 +42,11 @@ class SimpleDocumentIngestor(AbstractDocumentIngestor):
             )
             return text
 
-        elif filename.endswith(".txt") or filename.endswith(".md"):
+        elif mime in ["text/plain", "text/markdown"]:
             return content_bytes.decode("utf-8", errors="ignore")
 
         else:
-            raise UnsupportedFileType()
+            raise UnsupportedFileType(message="Only pdf, text and markdown files are allowed")
 
     def ingest(
         self,

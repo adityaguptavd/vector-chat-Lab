@@ -1,6 +1,7 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+import json
 
 from app.core.responses import ResponseBuilder
 
@@ -112,7 +113,7 @@ def register_exception_handlers(app):
         return ResponseBuilder.error(
             422,
             "Invalid request payload",
-            errors=exc.errors(),
+            errors=json.loads(json.dumps(exc.errors(), default=str)),
         )
     
 

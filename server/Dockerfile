@@ -5,6 +5,9 @@ WORKDIR /app
 
 # System deps for building wheels
 RUN apt-get update && apt-get install -y build-essential \
+    libmagic1 \
+    libmagic-dev \
+    file \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

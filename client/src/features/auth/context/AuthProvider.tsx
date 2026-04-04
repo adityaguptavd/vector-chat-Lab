@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { AuthContext } from "./auth-context";
 import { useMe } from "../hooks/useMe";
+import { UserData } from "../types";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserData | null>(null);
 
   const { getMe } = useMe();
 
@@ -30,7 +32,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setToken(null);
       }
 
-      // valid → keep token
+      // valid → keep token and save user details
+      else {
+        setUser(result.data);
+      }
+
       setLoading(false);
     };
 
@@ -49,7 +55,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ token, isAuthenticated, loading, login, logout }}
+      value={{ token, user, isAuthenticated, loading, login, logout }}
     >
       {children}
     </AuthContext.Provider>

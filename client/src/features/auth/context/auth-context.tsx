@@ -1,7 +1,13 @@
 import { createContext } from "react";
 
+type User = {
+  user_id: string;
+  email: string;
+};
+
 type AuthContextType = {
   token: string | null;
+  user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
   login: (token: string) => void;

@@ -33,6 +33,12 @@ class DocumentService:
             )
 
             if existing:
+                self.ingestor.ingest(
+                    user_id=user_id,
+                    document_id=existing.id,
+                    content_bytes=content,
+                    filename=filename,
+                )
                 return DocumentResult.model_validate(existing)
 
             document = Document.create(

@@ -42,8 +42,8 @@ type UseFormReturn = {
   validateAll: () => boolean;
 
   handleSubmit: (
-    onSubmit: (values: FormValues) => void
-  ) => (e: React.FormEvent) => void;
+    onSubmit: (values: FormValues) => void,
+  ) => (e: React.SubmitEvent) => void;
 };
 
 /* =========================
@@ -102,9 +102,20 @@ export const useForm = (): UseFormReturn => {
   const getFieldProps = (name: string) => {
     return {
       name,
-      value: values[name] || "",
+
+      // ✅ Controlled for normal inputs
+      value: values[name] ?? "",
+
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
+        const target = e.target;
+
+        let value: any;
+
+        if (target.type === "file") {
+          value = target.files; // ✅ FileList
+        } else {
+          value = target.value;
+        }
 
         setValues((prev) => ({
           ...prev,
@@ -113,6 +124,7 @@ export const useForm = (): UseFormReturn => {
 
         validateField(name, value);
       },
+
       onBlur: () => {
         setTouched((prev) => ({
           ...prev,
@@ -141,8 +153,7 @@ export const useForm = (): UseFormReturn => {
     const field = fields[name];
     if (!field) return null;
 
-    const value =
-      valueOverride !== undefined ? valueOverride : values[name];
+    const value = valueOverride !== undefined ? valueOverride : values[name];
     const rules = field.rules;
 
     let error: string | null = null;
@@ -152,11 +163,7 @@ export const useForm = (): UseFormReturn => {
         error = rules.required;
       }
 
-      if (
-        !error &&
-        rules.minLength &&
-        value?.length < rules.minLength.value
-      ) {
+      if (!error && rules.minLength && value?.length < rules.minLength.value) {
         error = rules.minLength.message;
       }
 
@@ -188,8 +195,7 @@ export const useForm = (): UseFormReturn => {
      Submit
   ========================= */
   const handleSubmit =
-    (onSubmit: (values: FormValues) => void) =>
-    (e: React.FormEvent) => {
+    (onSubmit: (values: FormValues) => void) => (e: React.SubmitEvent) => {
       e.preventDefault();
 
       const isValid = validateAll();
