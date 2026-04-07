@@ -42,8 +42,10 @@ type UseFormReturn = {
   validateAll: () => boolean;
 
   handleSubmit: (
-    onSubmit: (values: FormValues) => void,
+    onSubmit: (values: FormValues, actions: { reset: () => void }) => void,
   ) => (e: React.SubmitEvent) => void;
+
+  reset: () => void;
 };
 
 /* =========================
@@ -195,14 +197,24 @@ export const useForm = (): UseFormReturn => {
      Submit
   ========================= */
   const handleSubmit =
-    (onSubmit: (values: FormValues) => void) => (e: React.SubmitEvent) => {
+    (onSubmit: (values: FormValues, actions: { reset: () => void }) => void) =>
+    (e: React.SubmitEvent) => {
       e.preventDefault();
 
       const isValid = validateAll();
       if (!isValid) return;
 
-      onSubmit(values);
+      onSubmit(values, { reset });
     };
+
+  /* =========================
+     Reset
+  ========================= */
+  const reset = () => {
+    setValues({});
+    setErrors({});
+    setTouched({});
+  };
 
   return {
     values,
@@ -215,5 +227,6 @@ export const useForm = (): UseFormReturn => {
     validateField,
     validateAll,
     handleSubmit,
+    reset,
   };
 };

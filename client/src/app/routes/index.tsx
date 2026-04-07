@@ -8,6 +8,7 @@ import LoginPage from "@/features/auth/pages/LoginPage";
 import RegisterPage from "@/features/auth/pages/RegisterPage";
 import Dashboard from "@/features/dashboard/pages/Dashboard";
 import DocumentsPage from "@/features/documents/pages/DocumentsPage";
+import ChatPage from "@/features/chat/pages/ChatPage";
 
 function AppRoutes() {
   return (
@@ -45,7 +46,7 @@ function AppRoutes() {
             <Route path="/" element={<Navigate to="/dashboard"></Navigate>} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/documents" element={<DocumentsPage />} />
-            <Route path="/chat" element={<>Chat</>} />
+            <Route path="/chat" element={<ChatPage />} />
             <Route path="/settings" element={<>Settings</>} />
           </Route>
 
