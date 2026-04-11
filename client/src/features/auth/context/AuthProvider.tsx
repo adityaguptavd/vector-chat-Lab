@@ -7,6 +7,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<UserData | null>(null);
+  const [sessionExpired, setSessionExpired] = useState<boolean>(false);
 
   const { getMe } = useMe();
 
@@ -46,16 +47,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = (newToken: string) => {
     localStorage.setItem("access_token", newToken);
     setToken(newToken);
+    setSessionExpired(false);
   };
 
   const logout = () => {
     localStorage.removeItem("access_token");
     setToken(null);
+    setSessionExpired(false);
   };
 
   return (
     <AuthContext.Provider
-      value={{ token, user, isAuthenticated, loading, login, logout }}
+      value={{ token, user, isAuthenticated, loading, login, logout, sessionExpired, setSessionExpired }}
     >
       {children}
     </AuthContext.Provider>

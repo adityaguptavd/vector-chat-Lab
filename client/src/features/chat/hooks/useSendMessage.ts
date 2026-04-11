@@ -1,43 +1,38 @@
 import { useState } from "react";
-import { sendMessageApi } from "../api";
-import { apiHandler } from "@/services/apiHandler";
-import type { ChatMessage } from "../types";
-import { Result } from "@/shared/types/result";
-import { ApiResponse } from "@/shared/types/api";
+import { sendMessageApi, streamMessageApi } from "../api";
+import { StreamMessageParams } from "../types";
 
 export const useSendMessage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const sendMessage = async (
-    sessionId: string,
-    content: string
-  ): Promise<Result<ChatMessage[]>> => {
+  // ---------------- NORMAL ----------------
+  const sendMessage = async (sessionId: string, content: string) => {
     setIsLoading(true);
 
-    const { data, error } =
-      await apiHandler<ApiResponse<ChatMessage[]>>(
-        sendMessageApi(sessionId, content)
-      );
-
-    setIsLoading(false);
-
-    if (error) return { success: false, error: error.message };
-
-    if (!data || !data.success) {
-      return {
-        success: false,
-        error: data?.message || "Message failed",
-      };
+    try {
+      const res = await sendMessageApi(sessionId, content);
+      return { success: true, data: res.data };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    return {
-      success: true,
-      data: data.data,
-    };
+  // ---------------- STREAM ----------------
+  const streamMessage = async (params: StreamMessageParams) => {
+    setIsLoading(true);
+
+    try {
+      await streamMessageApi(params);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {
     sendMessage,
+    streamMessage,
     isLoading,
   };
 };

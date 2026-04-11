@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useChatSessions } from "../hooks/useChatSessions";
 import { useChatMessages } from "../hooks/useChatMessages";
 import { useSendMessage } from "../hooks/useSendMessage";
+import { useStreamMode } from "../hooks/useStreamMode";
+
+import { normalizeMessages } from "../utils";
+
 import { useToastContext } from "@/shared/components/Toast/ToastContext";
 
 import { Form } from "@/shared/components/Form/Form";
@@ -13,7 +17,8 @@ import { Input } from "@/shared/components/Input";
 export default function ChatPage() {
   const { sessions, fetchSessions, createSession } = useChatSessions();
   const { messages, setMessages, fetchMessages } = useChatMessages();
-  const { sendMessage, isLoading } = useSendMessage();
+  const { sendMessage, streamMessage, isLoading } = useSendMessage();
+  const { isStreaming, toggle } = useStreamMode();
 
   const { showPromise } = useToastContext();
 
@@ -24,6 +29,20 @@ export default function ChatPage() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
     initialSessionId,
   );
+
+  // for buffering and throttling
+  const bufferRef = useRef("");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasStartedRef = useRef(false);
+
+  // for auto scroll
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isAtBottomRef = useRef(true);
+
+  // AI typing rate
+  const TIME_FRAME = 30;
+  const MAX_TYPED_CHARS = 5;
 
   useEffect(() => {
     fetchSessions();
@@ -59,6 +78,42 @@ export default function ChatPage() {
     }
   };
 
+  const appendChunk = (prev: string, chunk: string) => {
+    if (!prev) return chunk;
+
+    const lastChar = prev[prev.length - 1];
+    const firstChar = chunk[0];
+
+    const needsSpace =
+      lastChar !== " " &&
+      firstChar !== " " &&
+      /[a-zA-Z0-9]/.test(lastChar) &&
+      /[a-zA-Z0-9]/.test(firstChar);
+
+    return needsSpace ? prev + " " + chunk : prev + chunk;
+  };
+
+  const getNextWordChunk = (buffer: string) => {
+    if (!buffer) return "";
+
+    // if buffer small → return all
+    if (buffer.length <= MAX_TYPED_CHARS) {
+      return buffer;
+    }
+
+    // try to find space boundary
+    const slice = buffer.slice(0, MAX_TYPED_CHARS);
+
+    const lastSpaceIndex = slice.lastIndexOf(" ");
+
+    if (lastSpaceIndex > 0) {
+      return buffer.slice(0, lastSpaceIndex + 1);
+    }
+
+    // fallback → take full slice (for long words)
+    return slice;
+  };
+
   // ---------------- SEND MESSAGE ----------------
 
   const handleSend = async (
@@ -70,7 +125,6 @@ export default function ChatPage() {
 
     let sessionId = currentSessionId;
 
-    // 🧠 lazy session creation
     if (!sessionId) {
       const sessionRes = await createSession();
       if (!sessionRes.success || !sessionRes.data) return;
@@ -80,30 +134,145 @@ export default function ChatPage() {
       await fetchSessions();
     }
 
-    const tempMessage = {
-      id: "temp-" + Date.now(),
+    // 🧠 1. Add USER message (optimistic)
+    const userTemp = {
+      id: "temp-user-" + Date.now(),
       session_id: sessionId!,
       role: "user" as const,
       content,
       created_at: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, tempMessage]);
+    // 🧠 2. Add EMPTY AI message (stream target)
+    const aiTempId = "temp-ai-" + Date.now();
+
+    const aiTemp = {
+      id: aiTempId,
+      session_id: sessionId!,
+      role: "assistant" as const,
+      content: "",
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userTemp, aiTemp]);
     reset();
 
-    const result = await showPromise(() => sendMessage(sessionId!, content), {
-      loading: "Thinking...",
-      success: "Response received",
-      error: "Failed to send",
-    });
+    // 3. START CHAT
+    if (isStreaming) {
+      intervalRef.current = setInterval(() => {
+        if (!bufferRef.current) return;
 
-    if (result.success && result.data) {
-      setMessages((prev) => [
-        ...prev.filter((m) => m.id !== tempMessage.id),
-        ...result.data!,
-      ]);
+        // delay start until some buffer collected
+        if (!hasStartedRef.current && bufferRef.current.length < 20) {
+          return;
+        }
+
+        hasStartedRef.current = true;
+
+        const nextChunk = getNextWordChunk(bufferRef.current);
+        bufferRef.current = bufferRef.current.slice(nextChunk.length);
+
+        setMessages((prev) => {
+          let updated = false;
+
+          const next = prev.map((m) => {
+            if (m.id !== aiTempId) return m;
+
+            updated = true;
+
+            return {
+              ...m,
+              content: appendChunk(m.content, nextChunk),
+            };
+          });
+
+          return updated ? next : prev;
+        });
+      }, TIME_FRAME);
+
+      // 🔁 STREAMING FLOW
+      await streamMessage({
+        sessionId,
+        content,
+        token: localStorage.getItem("access_token")!,
+
+        onChunk: (chunk) => {
+          bufferRef.current += chunk;
+        },
+
+        onWarning: (warn) => {
+          console.warn("Warning:", warn.message);
+        },
+
+        onError: (err) => {
+          console.error("Error:", err.message);
+        },
+
+        onEnd: (data) => {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+
+          const newMessages = normalizeMessages(data);
+
+          setMessages((prev) => {
+            const filtered = prev.filter(
+              (m) => m.id !== userTemp.id && m.id !== aiTempId,
+            );
+
+            return [...filtered, ...newMessages];
+          });
+
+          bufferRef.current = "";
+          hasStartedRef.current = false;
+        },
+      });
+    } else {
+      // NON-STREAMING FLOW
+      const result = await showPromise(() => sendMessage(sessionId!, content), {
+        loading: "Thinking...",
+        success: "Response received",
+        error: "Failed to send",
+      });
+
+      if (result.success && result.data) {
+        setMessages((prev) => [
+          ...prev.filter((m) => m.id !== userTemp.id),
+          ...result.data!,
+        ]);
+      }
     }
   };
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const threshold = 100; // px buffer
+      const isAtBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+
+      isAtBottomRef.current = isAtBottom;
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!isAtBottomRef.current) return;
+
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-950 text-white">
@@ -151,40 +320,68 @@ export default function ChatPage() {
       </div>
 
       {/* Chat */}
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 overflow-hidden">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {messages.map((m) => (
-            <div key={m.id}>
-              <b>{m.role}:</b> {m.content}
-            </div>
-          ))}
+        <div
+          className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0"
+          ref={containerRef}
+        >
+          {messages.map((m) => {
+            const isStreamingMessage = m.id.startsWith("temp-ai-");
+
+            return (
+              <div key={m.id}>
+                <b>{m.role}:</b> {m.content}
+                {isStreamingMessage && (
+                  <span className="ml-1 inline-block w-[8px] bg-white animate-pulse">
+                    &nbsp;
+                  </span>
+                )}
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
         </div>
 
         {/* ✅ FORM: SEND MESSAGE */}
         <Form onSubmit={handleSend}>
-          <div className="p-4 border-t border-gray-800 flex gap-2">
-            <div className="grow">
-              <FormField
-                name="message"
-                // rules={{ required: "Message cannot be empty" }}
-                rules={{ required: "" }}
+          <div className="p-4 border-t border-gray-800">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={toggle}
+                type="button"
+                className={`text-xs px-3 py-1 rounded transition-all duration-200 ${
+                  isStreaming
+                    ? "bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                    : "bg-gray-800 text-gray-400"
+                }`}
               >
-                <Input
-                  type="text"
-                  placeholder="Type a message..."
-                  className="flex-1 p-2 bg-gray-800 rounded outline-none"
-                />
-              </FormField>
+                ⚡ Streaming: {isStreaming ? "ON" : "OFF"}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <div className="grow">
+                <FormField
+                  name="message"
+                  // rules={{ required: "Message cannot be empty" }}
+                  rules={{ required: "" }}
+                >
+                  <Input
+                    type="text"
+                    placeholder="Type a message..."
+                    className="flex-1 p-2 bg-gray-800 rounded outline-none"
+                  />
+                </FormField>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-blue-600 px-4 rounded"
+              >
+                Send
+              </button>
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="bg-blue-600 px-4 rounded"
-            >
-              Send
-            </button>
           </div>
         </Form>
       </div>

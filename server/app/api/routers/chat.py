@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.api.deps import get_current_user, get_chat_service
+from app.api.schemas.chat_schemas import StreamRequest
 from app.application.services.chat_service import ChatService
 from app.domain.user import User
 from app.core.responses import ResponseBuilder
@@ -79,5 +80,34 @@ async def stream_chat(
 
     return StreamingResponse(
         service.stream_message(session=session, user_msg=user_msg, content=content, user_id=user.id),
+        media_type="text/event-stream"
+    )
+
+
+@router.post("/{session_id}/stream")
+async def stream_chat(
+    session_id: str,
+    body: StreamRequest,
+    service: ChatService = Depends(get_chat_service),
+    user: User = Depends(get_current_user)
+) -> StreamingResponse:
+
+    content = body.content
+
+    session = service.get_or_create_session(user_id=user.id, session_id=session_id)
+    
+    user_msg = service.store_user_message(
+        user_id=user.id,
+        session=session,
+        content=content
+    )
+
+    return StreamingResponse(
+        service.stream_message(
+            session=session,
+            user_msg=user_msg,
+            content=content,
+            user_id=user.id
+        ),
         media_type="text/event-stream"
     )

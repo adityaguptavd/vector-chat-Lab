@@ -19,3 +19,29 @@ export type SendMessagePayload = {
   session_id: string;
   content: string;
 };
+
+export type StreamChunkHandler = (chunk: string) => void;
+
+export type StreamEndPayload = {
+  user_message: ChatMessage | null;
+  ai_message: ChatMessage | null;
+};
+
+export type StreamError = {
+  message: string;
+};
+
+export type StreamWarning = {
+  message: string;
+};
+
+export type StreamMessageParams = {
+  sessionId: string;
+  content: string;
+  token: string;
+
+  onChunk: StreamChunkHandler;
+  onEnd: (data: StreamEndPayload) => void;
+  onError: (err: StreamError) => void;
+  onWarning: (warn: StreamWarning) => void;
+};

@@ -1,3 +1,4 @@
+import { emitSessionExpired } from "@/shared/events/authEvents";
 import axios from "axios";
 
 export const apiClient = axios.create({
@@ -13,3 +14,14 @@ apiClient.interceptors.request.use((config) => {
 
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      emitSessionExpired();
+    }
+
+    return Promise.reject(error);
+  }
+);

@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
+import { AuthEventHandler } from "../AuthEventHandler";
 
 const ProtectedLayout = () => {
   return (
@@ -12,6 +13,8 @@ const ProtectedLayout = () => {
       <div className="flex flex-col flex-1">
         {/* Navbar */}
         <Navbar />
+
+        <AuthEventHandler />
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6 bg-gray-900">
