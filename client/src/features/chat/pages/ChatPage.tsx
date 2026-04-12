@@ -237,7 +237,7 @@ export default function ChatPage() {
 
       if (result.success && result.data) {
         setMessages((prev) => [
-          ...prev.filter((m) => m.id !== userTemp.id),
+          ...prev.filter((m) => m.id !== userTemp.id && m.id !== aiTempId),
           ...result.data!,
         ]);
       }
@@ -381,7 +381,6 @@ export default function ChatPage() {
                 Send
               </button>
             </div>
-
           </div>
         </Form>
       </div>

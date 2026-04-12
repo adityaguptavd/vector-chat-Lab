@@ -3,9 +3,11 @@ import { FormField } from "@/shared/components/Form/FormField";
 import { Input } from "@/shared/components/Input";
 import { useToastContext } from "@/shared/components/Toast/ToastContext";
 import { useUploadDocument } from "../hooks/useUploadDocument";
+import { useDocuments } from "../hooks/useDocuments";
 
 export default function DocumentsPage() {
   const { uploadDocument, isLoading } = useUploadDocument();
+  const { data: documents, isLoading: isFetching, fetchDocuments } = useDocuments();  
   const { showPromise } = useToastContext();
 
   const handleSubmit = async (values: Record<string, any>) => {
@@ -23,8 +25,7 @@ export default function DocumentsPage() {
     );
 
     if (result.success) {
-      // later: refresh list
-      console.log("Uploaded:", result.data);
+      await fetchDocuments();
     }
   };
 
@@ -72,13 +73,29 @@ export default function DocumentsPage() {
 
       {/* Placeholder List */}
       <section className="bg-gray-900 border border-gray-700 rounded-lg p-6">
-        <h2 className="text-lg font-medium text-white mb-4">
-          Your Documents
-        </h2>
-
-        <p className="text-sm text-gray-400">
-          No documents uploaded yet.
-        </p>
+        {isFetching ? (
+          <p className="text-sm text-gray-400">Loading documents...</p>
+        ) : documents.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            No documents uploaded yet.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {documents.map((doc) => (
+              <li
+                key={doc.id}
+                className="p-3 bg-gray-800 rounded flex justify-between items-center"
+              >
+                <span className="text-white text-sm">
+                  {doc.filename}
+                </span>
+                <span className="text-xs text-gray-400">
+                  ID: {doc.id}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

@@ -21,3 +21,13 @@ export const uploadDocumentApi = async (
 
   return response.data;
 };
+
+export const listDocumentsApi = async (): Promise<
+  ApiResponse<DocumentData[]>
+> => {
+  const response = await apiClient.get<
+    ApiResponse<DocumentData[]>
+  >("/documents");
+
+  return response.data;
+};

@@ -4,6 +4,8 @@ from app.domain.core.document_ingestor import AbstractDocumentIngestor
 from app.domain.core.content_hasher import AbstractContentHasher
 from app.application.dto.document import DocumentResult
 
+from typing import List
+
 
 class DocumentService:
 
@@ -58,3 +60,13 @@ class DocumentService:
         )
 
         return DocumentResult.model_validate(created)
+    
+    def list_documents(self, user_id: str) -> List[DocumentResult]:
+            with self.uow:
+                documents = self.uow.document_repo.get_by_user(user_id)
+
+            return [
+                DocumentResult.model_validate(doc)
+                for doc in documents
+            ]
+    

@@ -85,9 +85,12 @@ class ChatService:
             session.touch()
             self.uow.chat_sessions_repo.update(session)
 
+        history = self._get_recent_messages(session.id)
+
         response_text = await self._rag.chat(
             user_id=user_id,
             query=content,
+            history=history
         )
 
         with self.uow:
@@ -106,6 +109,17 @@ class ChatService:
         )
 
         return [ChatMessageResult.model_validate(user_msg), ChatMessageResult.model_validate(ai_msg)]
+    
+    def _get_recent_messages(
+        self,
+        session_id: str,
+        limit: int = 10
+    ) -> list[ChatMessage]:
+        
+        with self.uow:
+            messages = self.uow.chat_messages_repo.get_by_session(session_id)
+
+        return messages[-limit:]
 
     def send_message(
         self,
@@ -201,11 +215,16 @@ class ChatService:
             # -------- STREAM -------- #
             full_response = ""
 
+            history = self._get_recent_messages(session.id)
+
             try:
                 async for chunk in self._rag.stream_chat(
                     user_id=user_id,
-                    query=content
+                    query=content,
+                    history=history
                 ):
+                    if not chunk.strip():
+                        continue
                     full_response += chunk
                     yield StreamResponseBuilder.chunk(chunk)
 

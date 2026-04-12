@@ -32,3 +32,15 @@ async def upload_document(
         status_code=201,
         data=document.model_dump(mode="json")
     )
+
+@router.get("/")
+async def list_documents(
+    user: User = Depends(get_current_user),
+    service: DocumentService = Depends(get_document_service),
+):
+    documents = service.list_documents(user.id)
+
+    return ResponseBuilder.success(
+        message="Documents fetched successfully",
+        data=[doc.model_dump(mode="json") for doc in documents],
+    )

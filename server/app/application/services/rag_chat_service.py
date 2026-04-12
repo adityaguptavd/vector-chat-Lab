@@ -1,5 +1,6 @@
 from app.application.interfaces.llm import AbstractLLM
 from app.application.services.retrieval_service import RetrievalService
+from app.domain.chat_message import ChatMessage
 from app.infrastructure.vector.schemas.vector_document import VectorDocument
 from app.core.utils.llm_validator import LLMResponseValidator
 from typing import List, AsyncGenerator
@@ -13,7 +14,26 @@ class RAGChatService:
         self._retrieval_service = retrieval_service
         self._llm = llm
 
-    async def chat(self, user_id: str, query: str, top_k: int = 5) -> str:
+    def _format_history(
+        self,
+        messages: list[ChatMessage]
+    ) -> list[dict]:
+
+        return [
+            {
+                "role": msg.role.value,
+                "content": msg.content
+            }
+            for msg in messages
+        ]
+
+    async def chat(
+        self,
+        user_id: str,
+        query: str,
+        history: list[ChatMessage] | None = None,
+        top_k: int = 5
+    ):
         documents = self._retrieval_service.search(
             user_id=user_id,
             query=query,
@@ -32,7 +52,13 @@ class RAGChatService:
         validated = LLMResponseValidator.validate(response)
         return validated
     
-    async def stream_chat(self, user_id: str, query: str, top_k: int = 5) -> AsyncGenerator[str, None]:
+    async def stream_chat(
+        self,
+        user_id: str,
+        query: str,
+        history: list[dict] | None = None,
+        top_k: int = 5
+    ) -> AsyncGenerator[str, None]:
         documents = self._retrieval_service.search(
             user_id=user_id,
             query=query,
@@ -53,9 +79,14 @@ class RAGChatService:
     def _build_context(self, documents: List[VectorDocument]) -> str:
         return "\n\n".join(doc.content for doc in documents)
 
-    def _build_messages(self, context: str, query: str) -> list[dict]:
-        return [
-            {
+    def _build_messages(
+            self, 
+            context: str, 
+            query: str,
+            history: list[dict] | None = None,
+        ) -> list[dict]:
+        
+        base = [{
                 "role": "system",
                 "content": """
 You are a strict AI assistant.
@@ -68,7 +99,13 @@ Response style:
 - Clear and direct
 - No unnecessary explanations
 """.strip(),
-            },
+            }]
+        
+        if history:
+            formatted = self._format_history(history)
+            base.extend(formatted)
+
+        base.append(
             {
                 "role": "user",
                 "content": f"""
@@ -78,5 +115,7 @@ Response style:
     Question:
     {query}
     """.strip(),
-            },
-        ]
+            }
+        )
+
+        return base
