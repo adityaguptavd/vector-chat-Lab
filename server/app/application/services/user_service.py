@@ -20,7 +20,7 @@ class UserService:
         self.password_hasher = password_hasher
         self.token_provider = token_provider
 
-    def register_user(self, email: str, raw_password: str) -> User:
+    def register_user(self, email: str, raw_password: str, full_name: str) -> User:
         logger.debug("Registration attempt", extra={"event": "register_attempt", "email": email})
 
         with self.uow as uow:
@@ -30,7 +30,7 @@ class UserService:
 
             hashed = self.password_hasher.hash(raw_password)
 
-            user = User.create(email=email, password_hash=hashed)
+            user = User.create(email=email, password_hash=hashed, full_name=full_name)
             created = uow.user_repo.create(user)
 
             logger.info("Registration success", extra={"event": "register_success", "user_id": user.id})
@@ -51,7 +51,7 @@ class UserService:
 
             logger.info("Login success", extra={"event": "login_success", "user_id": user.id})
 
-            return AuthResult(access_token=token, user_id=user.id, email=user.email)
+            return AuthResult(access_token=token, user_id=user.id, email=user.email, full_name=user.full_name)
         
     def get_user_from_token(self, token: str) -> User:
         logger.debug("Token verification attempt", extra={"event": "token_verify_attempt"})

@@ -45,3 +45,6 @@ export type StreamMessageParams = {
   onError: (err: StreamError) => void;
   onWarning: (warn: StreamWarning) => void;
 };
+
+// archive/unarchive view
+export type SessionView = "active" | "archived";

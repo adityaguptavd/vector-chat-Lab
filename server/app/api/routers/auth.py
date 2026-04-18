@@ -18,7 +18,7 @@ def register(
     data: RegisterRequest,
     service: UserService = Depends(get_user_service),
 ) -> JSONResponse:
-    user = service.register_user(data.email, data.password)
+    user = service.register_user(data.email, data.password, data.full_name)
 
     # Immediately issue token (better UX)
     result = service.login_user(data.email, data.password)

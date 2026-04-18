@@ -2,6 +2,7 @@
 export type RegisterPayload = {
   email: string;
   password: string;
+  full_name: string;
 };
 
 export type RegisterData = {
@@ -24,4 +25,5 @@ export type LoginData = {
 export type UserData = {
   user_id: string;
   email: string;
+  full_name?: string;
 }

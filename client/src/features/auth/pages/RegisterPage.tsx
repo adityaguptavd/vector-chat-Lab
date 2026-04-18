@@ -24,6 +24,7 @@ export default function RegisterPage() {
         registerUser({
           email: values.email,
           password: values.password,
+          full_name: values.full_name
         }),
       {
         loading: "Creating your account...",
@@ -44,6 +45,19 @@ export default function RegisterPage() {
       <Form onSubmit={handleSubmit}>
         <div className="w-80 bg-gray-900 p-6 rounded space-y-4">
           <h2 className="text-xl font-semibold">Register</h2>
+
+          {/* Email */}
+          <FormField
+            name="full_name"
+            rules={{ required: "Full Name is required" }}
+          >
+            <Input
+              type="text"
+              label="Full Name"
+              placeholder="Enter full name"
+              className="w-full p-2 rounded bg-gray-800 outline-none"
+            />
+          </FormField>
 
           {/* Email */}
           <FormField

@@ -18,7 +18,12 @@ class AbstractChatSessionRepository(ABC):
 
     @abstractmethod
     def get_by_user(self, user_id: str) -> List[ChatSession]:
-        """Fetch all sessions belonging to a user (latest first handled in infra)."""
+        """Fetch all unarchived sessions belonging to a user (latest first handled in infra)."""
+        pass
+    
+    @abstractmethod
+    def get_archived_by_user(self, user_id: str) -> List[ChatSession]:
+        """Fetch all archived sessions belonging to a user (latest first handled in infra)."""
         pass
 
     @abstractmethod

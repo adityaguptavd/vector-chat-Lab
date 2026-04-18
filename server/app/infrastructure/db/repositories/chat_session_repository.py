@@ -28,9 +28,25 @@ class ChatSessionRepository(AbstractChatSessionRepository):
     def get_by_user(self, user_id: str) -> List[ChatSession]:
         stmt = (
             select(ChatSessionModel)
-            .where(ChatSessionModel.user_id == user_id)
+            .where(
+                ChatSessionModel.user_id == user_id,
+                ChatSessionModel.is_archived.is_(False)
+            )
             .order_by(ChatSessionModel.updated_at.desc())
         )
+        results = self.db.execute(stmt).scalars().all()
+        return [model.to_domain() for model in results]
+    
+    def get_archived_by_user(self, user_id: str) -> List[ChatSession]:
+        stmt = (
+            select(ChatSessionModel)
+            .where(
+                ChatSessionModel.user_id == user_id,
+                ChatSessionModel.is_archived.is_(True)
+            )
+            .order_by(ChatSessionModel.updated_at.desc())
+        )
+
         results = self.db.execute(stmt).scalars().all()
         return [model.to_domain() for model in results]
 

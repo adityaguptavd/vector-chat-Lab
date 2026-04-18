@@ -10,7 +10,7 @@ const Dashboard = () => {
       {/* Welcome Section */}
       <section className="bg-gray-800 border border-gray-700 rounded-lg p-6">
         <h1 className="text-2xl font-semibold text-white">
-          Welcome back{user?.email ? `, ${user.email}` : ""} 👋
+          Welcome back, {user?.full_name ? user.full_name : "User"} 👋
         </h1>
         <p className="text-gray-400 mt-1">
           Here's what's happening with your workspace today.
@@ -26,7 +26,7 @@ const Dashboard = () => {
         <div className="space-y-2 text-sm">
           <p className="text-gray-300">
             <span className="text-gray-400">Name:</span>{" "}
-            {user?.user_id.toUpperCase() || "N/A"}
+            {user?.full_name || "User"}
           </p>
           <p className="text-gray-300">
             <span className="text-gray-400">Email:</span> {user?.email || "N/A"}

@@ -36,12 +36,26 @@ class ChatService:
         with self.uow:
             sessions = self.uow.chat_sessions_repo.get_by_user(user_id)
         return [ChatSessionResult.model_validate(session) for session in sessions]
+    
+    def list_archived_sessions(self, user_id: str) -> List[ChatSessionResult]:
+        with self.uow:
+            sessions = self.uow.chat_sessions_repo.get_archived_by_user(user_id)
+
+        return [ChatSessionResult.model_validate(s) for s in sessions]
 
     def archive_session(self, user_id: str, session_id: str) -> ChatSessionResult:
         with self.uow:
             session = self._get_owned_session(user_id, session_id)
 
             session.archive()
+            updated = self.uow.chat_sessions_repo.update(session)
+        return ChatSessionResult.model_validate(updated)
+    
+    def unarchive_session(self, user_id: str, session_id: str) -> ChatSessionResult:
+        with self.uow:
+            session = self._get_owned_session(user_id, session_id)
+
+            session.unarchive()
             updated = self.uow.chat_sessions_repo.update(session)
         return ChatSessionResult.model_validate(updated)
 

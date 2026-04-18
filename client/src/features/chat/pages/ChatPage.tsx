@@ -13,9 +13,16 @@ import { useToastContext } from "@/shared/components/Toast/ToastContext";
 import { Form } from "@/shared/components/Form/Form";
 import { FormField } from "@/shared/components/Form/FormField";
 import { Input } from "@/shared/components/Input";
+import { SessionView } from "../types";
 
 export default function ChatPage() {
-  const { sessions, fetchSessions, createSession } = useChatSessions();
+  const {
+    sessions,
+    fetchSessions,
+    createSession,
+    archiveSession,
+    unarchiveSession,
+  } = useChatSessions();
   const { messages, setMessages, fetchMessages } = useChatMessages();
   const { sendMessage, streamMessage, isLoading } = useSendMessage();
   const { isStreaming, toggle } = useStreamMode();
@@ -30,6 +37,8 @@ export default function ChatPage() {
     initialSessionId,
   );
 
+  const [view, setView] = useState<SessionView>("active");
+
   // for buffering and throttling
   const bufferRef = useRef("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -43,10 +52,6 @@ export default function ChatPage() {
   // AI typing rate
   const TIME_FRAME = 30;
   const MAX_TYPED_CHARS = 5;
-
-  useEffect(() => {
-    fetchSessions();
-  }, []);
 
   useEffect(() => {
     if (!currentSessionId) {
@@ -76,6 +81,39 @@ export default function ChatPage() {
       setCurrentSessionId(res.data.id);
       await fetchSessions();
     }
+  };
+
+  // Archive a session
+  const handleArchive = async (sessionId: string) => {
+    const res = await showPromise(() => archiveSession(sessionId), {
+      loading: "Archiving chat...",
+      success: "Chat archived",
+      error: "Failed to archive chat",
+    });
+
+    if (!res.success) return;
+
+    // if current session → reset UI
+    if (currentSessionId === sessionId) {
+      setCurrentSessionId(null);
+      setMessages([]);
+    }
+
+    // refetch based on current view
+    await fetchSessions(view);
+  };
+
+  const handleUnarchive = async (sessionId: string) => {
+    const res = await showPromise(() => unarchiveSession(sessionId), {
+      loading: "Restoring chat...",
+      success: "Chat restored",
+      error: "Failed to restore chat",
+    });
+
+    if (!res.success) return;
+
+    // refetch current view
+    await fetchSessions(view);
   };
 
   const appendChunk = (prev: string, chunk: string) => {
@@ -244,6 +282,11 @@ export default function ChatPage() {
     }
   };
 
+  // fetch active/unarchived chats based on view
+  useEffect(() => {
+    fetchSessions(view);
+  }, [view]);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -295,6 +338,31 @@ export default function ChatPage() {
           </div>
         </Form>
 
+        {/* Tabs for archive/unarchived chats */}
+        <div className="flex gap-2 mb-3 sticky top-0 bg-gray-950 pb-2">
+          <button
+            onClick={() => setView("active")}
+            className={`px-3 py-1 rounded text-sm ${
+              view === "active"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-800 text-gray-400"
+            }`}
+          >
+            Chats
+          </button>
+
+          <button
+            onClick={() => setView("archived")}
+            className={`px-3 py-1 rounded text-sm ${
+              view === "archived"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-800 text-gray-400"
+            }`}
+          >
+            Archived
+          </button>
+        </div>
+
         {sessions.map((s) => {
           const isActive = s.id === currentSessionId;
 
@@ -302,18 +370,43 @@ export default function ChatPage() {
             <div
               key={s.id}
               onClick={() => setCurrentSessionId(s.id)}
-              className={`cursor-pointer p-2 rounded flex items-center gap-2 transition-all duration-200 ${
+              className={`cursor-pointer p-2 rounded flex items-center justify-between gap-2 transition-all duration-200 ${
                 isActive
                   ? "bg-blue-600 text-white"
                   : "hover:bg-gray-800 text-gray-300"
               }`}
             >
-              <div
-                className={`w-1 h-5 rounded ${
-                  isActive ? "bg-white" : "bg-transparent"
-                }`}
-              />
-              <span className="truncate">{s.title || "Untitled"}</span>
+              <div className="flex items-center gap-2 flex-1">
+                <div
+                  className={`w-1 h-5 rounded ${
+                    isActive ? "bg-white" : "bg-transparent"
+                  }`}
+                />
+                <span className="truncate">{s.title || "Untitled"}</span>
+              </div>
+
+              {/* ACTION BUTTON */}
+              {view === "active" ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleArchive(s.id);
+                  }}
+                  className="text-xs text-gray-400 hover:text-red-400"
+                >
+                  Archive
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUnarchive(s.id);
+                  }}
+                  className="text-xs text-gray-400 hover:text-green-400"
+                >
+                  Restore
+                </button>
+              )}
             </div>
           );
         })}

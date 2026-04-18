@@ -28,6 +28,15 @@ export const listSessionsApi = async (): Promise<
   return res.data;
 };
 
+export const listArchivedSessionsApi = async (): Promise<
+  ApiResponse<ChatSession[]>
+> => {
+  const res = await apiClient.get<ApiResponse<ChatSession[]>>(
+    "/chat/sessions/archived"
+  );
+  return res.data;
+};
+
 // ---------------- MESSAGE ----------------
 
 export const listMessagesApi = async (
@@ -134,4 +143,24 @@ export const streamMessageApi = async ({
       }
     }
   }
+};
+
+// ---------------- SESSION (ARCHIVE) ----------------
+
+export const archiveSessionApi = async (
+  sessionId: string
+): Promise<ApiResponse<ChatSession>> => {
+  const res = await apiClient.patch<ApiResponse<ChatSession>>(
+    `/chat/sessions/${sessionId}/archive`
+  );
+  return res.data;
+};
+
+export const unarchiveSessionApi = async (
+  sessionId: string
+): Promise<ApiResponse<ChatSession>> => {
+  const res = await apiClient.patch<ApiResponse<ChatSession>>(
+    `/chat/sessions/${sessionId}/unarchive`
+  );
+  return res.data;
 };

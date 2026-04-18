@@ -38,5 +38,9 @@ class ChatSession:
         self.is_archived = True
         self.touch()
 
+    def unarchive(self) -> None:
+        self.is_archived = False
+        self.touch()
+
     def touch(self) -> None:
         self.updated_at = _utcnow()

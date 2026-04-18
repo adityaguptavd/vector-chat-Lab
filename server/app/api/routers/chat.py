@@ -34,6 +34,15 @@ def list_sessions(
 
     return ResponseBuilder.success(message="Chat sessions retrieved", data=[p.model_dump(mode="json") for p in payload])
 
+@router.get("/sessions/archived")
+def list_sessions(
+    user: User = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service),
+) -> JSONResponse:
+    payload = service.list_archived_sessions(user.id)
+
+    return ResponseBuilder.success(message="Chat sessions retrieved", data=[p.model_dump(mode="json") for p in payload])
+
 
 # ---------------- MESSAGE ----------------
 
@@ -110,4 +119,33 @@ async def stream_chat(
             user_id=user.id
         ),
         media_type="text/event-stream"
+    )
+
+@router.patch("/sessions/{session_id}/archive")
+def archive_session(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service),
+) -> JSONResponse:
+
+    payload = service.archive_session(user.id, session_id)
+
+    return ResponseBuilder.success(
+        message="Chat session archived",
+        data=payload.model_dump(mode="json")
+    )
+
+
+@router.patch("/sessions/{session_id}/unarchive")
+def unarchive_session(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service),
+) -> JSONResponse:
+
+    payload = service.unarchive_session(user.id, session_id)
+
+    return ResponseBuilder.success(
+        message="Chat session unarchived",
+        data=payload.model_dump(mode="json")
     )
