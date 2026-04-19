@@ -1,10 +1,11 @@
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infrastructure.db.base import Base
+from app.infrastructure.db.mixins import SoftDeleteMixin, TimestampMixin
 from app.domain.document import Document
 
 
-class DocumentModel(Base):
+class DocumentModel(Base, SoftDeleteMixin, TimestampMixin):
     __tablename__ = "documents"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -39,4 +40,6 @@ class DocumentModel(Base):
             user_id=self.user_id,
             filename=self.filename,
             content_hash=self.content_hash,
+            created_at=self.created_at,
+            updated_at=self.updated_at
         )

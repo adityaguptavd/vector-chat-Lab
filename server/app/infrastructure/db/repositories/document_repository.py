@@ -7,38 +7,74 @@ from app.domain.repositories.document_repository import (
     AbstractDocumentRepository,
 )
 from app.infrastructure.db.models.document_model import DocumentModel
+from .base_repository import BaseRepository
 
 
-class DocumentRepository(AbstractDocumentRepository):
+class DocumentRepository(
+    BaseRepository[DocumentModel],
+    AbstractDocumentRepository
+):
 
     def __init__(self, db_session: Session):
-        self.db = db_session
+        super().__init__(db_session, DocumentModel)
 
+    # ------------------------
+    # 🟢 CREATE
+    # ------------------------
     def create(self, document: Document) -> Document:
         model = DocumentModel.from_domain(document)
-        self.db.add(model)
-        self.db.flush()
-        return model.to_domain()
+        saved = super().create(model)
+        return saved.to_domain()
 
-    def get_by_id(self, document_id: str) -> Optional[Document]:
-        model = self.db.get(DocumentModel, document_id)
+    # ------------------------
+    # 🔍 GET BY ID
+    # ------------------------
+    def get_by_id(
+        self,
+        document_id: str,
+        include_deleted: bool = False
+    ) -> Optional[Document]:
+
+        model = super().get_by_id(document_id, include_deleted)
         return model.to_domain() if model else None
 
+    # ------------------------
+    # 📄 GET BY USER
+    # ------------------------
     def get_by_user(self, user_id: str) -> List[Document]:
-        stmt = select(DocumentModel).where(
-            DocumentModel.user_id == user_id
-        )
-        results = self.db.execute(stmt).scalars().all()
-        return [model.to_domain() for model in results]
 
+        stmt = select(self.model)
+
+        stmt = self._apply_filters(stmt, {
+            "user_id": user_id
+        })
+
+        stmt = self._apply_not_deleted(stmt)
+
+        stmt = self._apply_ordering(stmt, order_by="-updated_at")
+
+        results = self._execute(stmt)
+
+        return [m.to_domain() for m in results]
+
+    # ------------------------
+    # 🔍 GET BY HASH
+    # ------------------------
     def get_by_hash(
         self,
         user_id: str,
         content_hash: str,
     ) -> Optional[Document]:
-        stmt = select(DocumentModel).where(
-            DocumentModel.user_id == user_id,
-            DocumentModel.content_hash == content_hash,
-        )
-        result = self.db.execute(stmt).scalar_one_or_none()
-        return result.to_domain() if result else None
+
+        stmt = select(self.model)
+
+        stmt = self._apply_filters(stmt, {
+            "user_id": user_id,
+            "content_hash": content_hash
+        })
+
+        stmt = self._apply_not_deleted(stmt)
+
+        model = self._execute_one(stmt)
+
+        return model.to_domain() if model else None

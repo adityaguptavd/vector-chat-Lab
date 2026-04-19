@@ -13,8 +13,9 @@ class ChatSession:
     id: str
     user_id: str
     title: Optional[str]
-    created_at: datetime
-    updated_at: datetime
+    last_activity_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     is_archived: bool = False
 
     @classmethod
@@ -29,18 +30,17 @@ class ChatSession:
             id=IDGenerator.generate(prefix="ch"),
             user_id=user_id,
             title=title,
-            created_at=now,
-            updated_at=now,
             is_archived=False,
+            last_activity_at=now
         )
 
     def archive(self) -> None:
         self.is_archived = True
-        self.touch()
+        self.update_last_activity()
 
     def unarchive(self) -> None:
         self.is_archived = False
-        self.touch()
+        self.update_last_activity()
 
-    def touch(self) -> None:
-        self.updated_at = _utcnow()
+    def update_last_activity(self, updated_time: Optional[datetime] = None) -> None:
+        self.last_activity_at = updated_time or _utcnow()

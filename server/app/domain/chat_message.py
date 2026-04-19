@@ -1,13 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Optional
 
 from app.core.utils.id_generator import IDGenerator
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-
+from app.domain.exceptions import BadRequestError
 
 class MessageRole(str, Enum):
     USER = "user"
@@ -21,8 +18,8 @@ class ChatMessage:
     session_id: str
     role: MessageRole
     content: str
-    created_at: datetime
-    is_deleted: bool = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     @classmethod
     def create(
@@ -34,16 +31,13 @@ class ChatMessage:
     ) -> "ChatMessage":
 
         if not content.strip():
-            raise ValueError("Message content cannot be empty")
+            raise BadRequestError("Message content cannot be empty")
 
         return cls(
             id=IDGenerator.generate(prefix="Msg", time_sortable=True),
             session_id=session_id,
             role=role,
             content=content,
-            created_at=_utcnow(),
-            is_deleted=False,
+            created_at=None,
+            updated_at=None
         )
-
-    def soft_delete(self) -> None:
-        self.is_deleted = True

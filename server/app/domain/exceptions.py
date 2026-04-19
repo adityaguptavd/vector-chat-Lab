@@ -41,3 +41,7 @@ class ForbiddenError(DomainException):
 class UnsupportedFileType(DomainException):
     def __init__(self, message: str = "Unsupported file type") -> None:
         super().__init__(message)
+
+class BadRequestError(DomainException):
+    def __init__(self, message: str = "Bad Request") -> None:
+        super().__init__(message)

@@ -86,7 +86,7 @@ class ChatService:
                     "Chat blocked: archived session",
                     extra={"event": "chat_blocked_archived", "session_id": session_id},
                 )
-                raise ValueError("Cannot send messages to archived session")
+                raise ForbiddenError("Cannot send messages to archived session")
 
             user_msg = ChatMessage.create(
                 session_id=session.id,
@@ -94,9 +94,9 @@ class ChatService:
                 content=content,
             )
 
-            self.uow.chat_messages_repo.create(user_msg)
+            user_msg = self.uow.chat_messages_repo.create(user_msg)
 
-            session.touch()
+            session.update_last_activity(updated_time=user_msg.updated_at)
             self.uow.chat_sessions_repo.update(session)
 
         history = self._get_recent_messages(session.id)
@@ -115,7 +115,9 @@ class ChatService:
                 content=response_text,
             )
 
-            self.uow.chat_messages_repo.create(ai_msg)
+            ai_msg = self.uow.chat_messages_repo.create(ai_msg)
+            session.update_last_activity(updated_time=ai_msg.updated_at)
+            self.uow.chat_sessions_repo.update(session)
 
         logger.info(
             "Chat message success",
@@ -147,6 +149,10 @@ class ChatService:
             session = self._get_owned_session(user_id, session_id)
 
             if session.is_archived:
+                logger.warning(
+                    "Chat blocked: archived session",
+                    extra={"event": "chat_blocked_archived", "session_id": session_id},
+                )
                 raise ForbiddenError("Cannot send message to archived session")
 
             msg = ChatMessage.create(
@@ -157,7 +163,7 @@ class ChatService:
 
             created = self.uow.chat_messages_repo.create(msg)
 
-            session.touch()
+            session.update_last_activity(updated_time=created.updated_at)
             self.uow.chat_sessions_repo.update(session)
 
         return ChatMessageResult.model_validate(created)
@@ -206,8 +212,8 @@ class ChatService:
                 content=content,
             )
 
-            self.uow.chat_messages_repo.create(user_msg)
-            session.touch()
+            user_msg = self.uow.chat_messages_repo.create(user_msg)
+            session.update_last_activity(updated_time=user_msg.updated_at)
             self.uow.chat_sessions_repo.update(session)
 
         return ChatMessageResult.model_validate(user_msg)
@@ -267,8 +273,8 @@ class ChatService:
                             role=MessageRole.ASSISTANT,
                             content=validated,
                         )
-                        self.uow.chat_messages_repo.create(ai_msg)
-                        session.touch()
+                        ai_msg = self.uow.chat_messages_repo.create(ai_msg)
+                        session.update_last_activity(updated_time=ai_msg.updated_at)
                         self.uow.chat_sessions_repo.update(session)
 
                 except Exception as e:

@@ -1,44 +1,72 @@
-from app.infrastructure.db.models.user_model import UserModel
-from app.domain.repositories.user_repository import AbstractUserRepository
 from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.domain.exceptions import UserAlreadyExists
 
 from app.domain.user import User
+from app.domain.exceptions import UserAlreadyExists
+from app.domain.repositories.user_repository import AbstractUserRepository
 
-class UserRepository(AbstractUserRepository):
+from app.infrastructure.db.models.user_model import UserModel
+from .base_repository import BaseRepository
+
+
+class UserRepository(
+    BaseRepository[UserModel],
+    AbstractUserRepository
+):
 
     def __init__(self, db_session: Session):
-        self.db = db_session
+        super().__init__(db_session, UserModel)
 
+    # ------------------------
+    # 🟢 CREATE
+    # ------------------------
     def create(self, user: User) -> User:
         model = UserModel.from_domain(user)
-        self.db.add(model)
 
         try:
-            self.db.flush()
+            saved = super().create(model)
         except IntegrityError as exc:
             raise UserAlreadyExists(
                 f"User with email '{user.email}' already exists"
             ) from exc
 
-        return model.to_domain()
-    
-    def get_by_id(self, user_id: str) -> Optional[User]:
-        model = self.db.get(UserModel, user_id)
+        return saved.to_domain()
+
+    # ------------------------
+    # 🔍 GET BY ID
+    # ------------------------
+    def get_by_id(
+        self,
+        user_id: str,
+        include_deleted: bool = False
+    ) -> Optional[User]:
+
+        model = super().get_by_id(user_id, include_deleted)
         return model.to_domain() if model else None
-    
+
+    # ------------------------
+    # 📧 GET BY EMAIL
+    # ------------------------
     def get_by_email(self, email: str) -> Optional[User]:
-        stmt = select(UserModel).where(UserModel.email == email)
-        result = self.db.execute(stmt).scalar_one_or_none()
 
-        return result.to_domain() if result else None
+        stmt = select(self.model)
 
+        stmt = self._apply_filters(stmt, {
+            "email": email
+        })
+
+        stmt = self._apply_not_deleted(stmt)
+
+        model = self._execute_one(stmt)
+
+        return model.to_domain() if model else None
+
+    # ------------------------
+    # 🔢 EXISTS BY EMAIL
+    # ------------------------
     def exists_by_email(self, email: str) -> bool:
-        stmt = select(func.count()).select_from(UserModel).where(
-            UserModel.email == email
-        )
-        count = self.db.execute(stmt).scalar_one()
-        return count > 0
+        return self._exists({
+            "email": email
+        })

@@ -1,48 +1,59 @@
 from typing import List, Optional
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.chat_message import ChatMessage
+from .base_repository import BaseRepository
 from app.domain.repositories.chat_message_repository import (
     AbstractChatMessageRepository,
 )
 from app.infrastructure.db.models.chat_message_model import ChatMessageModel
 
 
-class ChatMessageRepository(AbstractChatMessageRepository):
+class ChatMessageRepository(
+    BaseRepository[ChatMessageModel],
+    AbstractChatMessageRepository
+):
 
-    def __init__(self, db_session: Session):
-        self.db = db_session
+    def __init__(self, db: Session):
+        super().__init__(db, ChatMessageModel)
 
     def create(self, message: ChatMessage) -> ChatMessage:
         model = ChatMessageModel.from_domain(message)
-        self.db.add(model)
-        self.db.flush()
-        return model.to_domain()
+        saved = super().create(model)
+        return saved.to_domain()
 
-    def get_by_id(self, message_id: str) -> Optional[ChatMessage]:
-        model = self.db.get(ChatMessageModel, message_id)
+    def get_by_id(
+        self,
+        message_id: str,
+        include_deleted: bool = False
+    ) -> Optional[ChatMessage]:
+
+        model = super().get_by_id(message_id, include_deleted=include_deleted)
         return model.to_domain() if model else None
 
-    def get_by_session(self, session_id: str) -> List[ChatMessage]:
-        stmt = (
-            select(ChatMessageModel)
-            .where(
-                ChatMessageModel.session_id == session_id,
-                ChatMessageModel.is_deleted.is_(False),
-            )
-            .order_by(ChatMessageModel.created_at.asc())
-        )
+    def get_by_session(
+        self,
+        session_id: str,
+        *,
+        page: int = 1,
+        limit: int = 50
+    ) -> List[ChatMessage]:
 
-        results = self.db.execute(stmt).scalars().all()
+        stmt = select(self.model)
+
+        stmt = self._apply_filters(stmt, {
+            "session_id": session_id
+        })
+
+        stmt = self._apply_not_deleted(stmt)
+        stmt = self._apply_ordering(stmt, "created_at")
+        stmt = self._paginate(stmt, page, limit)
+
+        results = self._execute(stmt)
+
         return [m.to_domain() for m in results]
 
     def soft_delete(self, message_id: str) -> None:
-        stmt = (
-            update(ChatMessageModel)
-            .where(ChatMessageModel.id == message_id)
-            .values(is_deleted=True)
-        )
-        self.db.execute(stmt)
-        self.db.flush()
+        super().soft_delete(message_id)

@@ -1,23 +1,23 @@
+from dataclasses import dataclass
+from typing import Optional
+from datetime import datetime
+
 from app.core.utils.id_generator import IDGenerator
 
 
+@dataclass(slots=True)
 class Document:
-
-    def __init__(
-        self,
-        id: str,
-        user_id: str,
-        filename: str,
-        content_hash: str,
-    ) -> None:
-        self.__id = id
-        self.__user_id = user_id
-        self.__filename = filename
-        self.__content_hash = content_hash
+    id: str
+    user_id: str
+    filename: str
+    content_hash: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     @classmethod
     def create(
         cls,
+        *,
         user_id: str,
         filename: str,
         content_hash: str,
@@ -29,29 +29,12 @@ class Document:
             content_hash=content_hash,
         )
 
-    @property
-    def id(self) -> str:
-        return self.__id
-
-    @property
-    def user_id(self) -> str:
-        return self.__user_id
-
-    @property
-    def filename(self) -> str:
-        return self.__filename
-
-    @property
-    def content_hash(self) -> str:
-        return self.__content_hash
-
-    def _set_id(self, id: str) -> None:
-        self.__id = id
-
     def to_dict(self) -> dict[str, str]:
         return {
-            "id": self.__id,
-            "user_id": self.__user_id,
-            "filename": self.__filename,
-            "content_hash": self.__content_hash,
+            "id": self.id,
+            "user_id": self.user_id,
+            "filename": self.filename,
+            "content_hash": self.content_hash,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
         }
